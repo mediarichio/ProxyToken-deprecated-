@@ -1,6 +1,6 @@
 # MediaRich Proxy Token
 
-Smart contracts for the MediaRich.io proxy token, the ICO token which later can be redeemed for the Dyncoin ecosystem token. 
+Smart contracts for the MediaRich.io proxy token, the ICO/IEO token which later can be redeemed for the Dyncoin ecosystem token. 
 
 Core to the ProxyToken is implementation of a fully-featured vesting token.
  
@@ -19,6 +19,8 @@ Here is a brief summary of its features and capabilities:
 - Enterprise-style support for roles and permissions, with mechanisms in place to prevent loss of ownership control or accidental transfer of ownership to an invalid address.
 - Full automated test coverage of the contract code written in nodejs.
 - I am wrapping up loose ends with this work before I publish the source, but it will be soon. I am eager to receive any feedback and hear ideas for improvement that this group may have. Also, I hope many of you will find it useful, and can help me improve on it.
+
+Many of these capabilities are intended to help make it easy for us to manage exchanges, allowing us to keep some control over how token grants are issued by exchange delegates. The pools mechanism makes it easy to place overall limits on what any given grantor is allowed to issue out of an account under their control.
 
 ## Getting Started
 
