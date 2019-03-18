@@ -34,7 +34,7 @@ Clone it to a folder called `openzeppelin-solidity` which is a sibling of `Proxy
 
 ### Installing
 
-After you've pulled the code, open a command propmt in ProxyToken and install node modules:
+After you've pulled the code, open a command prompt in `ProxyToken` and install the required node modules.
 
 First, install NPM (if you haven't already)
 
@@ -42,7 +42,7 @@ First, install NPM (if you haven't already)
 npm install npm -g
 ```
 
-And then the needed modules
+And then the needed modules:
 
 ```
 npm install --save mocha@^5.1.1  colors  solc@^0.5.6  web3@^1.0.0-beta.37  ganache-cli@^6.4.1  truffle-hdwallet-provider@0.0.5
