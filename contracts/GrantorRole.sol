@@ -19,83 +19,83 @@ import "..\..\openzeppelin-solidity\contracts\access\Roles.sol";
  * it is ok for owner to shed initially granted roles by removing role from self.
  */
 contract GrantorRole is Ownable {
-	bool private constant OWNER_UNIFORM_GRANTOR_FLAG = false;
+    bool private constant OWNER_UNIFORM_GRANTOR_FLAG = false;
 
-	using Roles for Roles.Role;
+    using Roles for Roles.Role;
 
-	event GrantorAdded(address indexed account);
-	event GrantorRemoved(address indexed account);
+    event GrantorAdded(address indexed account);
+    event GrantorRemoved(address indexed account);
 
-	Roles.Role private _grantors;
-	mapping (address => bool) private _isUniformGrantor;
+    Roles.Role private _grantors;
+    mapping (address => bool) private _isUniformGrantor;
 
-	constructor () internal {
-		_addGrantor(msg.sender, OWNER_UNIFORM_GRANTOR_FLAG);
-	}
+    constructor () internal {
+        _addGrantor(msg.sender, OWNER_UNIFORM_GRANTOR_FLAG);
+    }
 
-	modifier onlyGrantor() {
-		require(isGrantor(msg.sender)); // Only grantor role can do this.
-		_;
-	}
+    modifier onlyGrantor() {
+        require(isGrantor(msg.sender)); // Only grantor role can do this.
+        _;
+    }
 
-	modifier onlyGrantorOrSelf(address account) {
-		require(isGrantor(msg.sender) || msg.sender == account); // Only grantor role can do this.
-		_;
-	}
+    modifier onlyGrantorOrSelf(address account) {
+        require(isGrantor(msg.sender) || msg.sender == account); // Only grantor role can do this.
+        _;
+    }
 
-	function isGrantor(address account) public view returns (bool) {
-		return _grantors.has(account);
-	}
+    function isGrantor(address account) public view returns (bool) {
+        return _grantors.has(account);
+    }
 
-	function addGrantor(address account, bool isUniformGrantor) public onlyOwner {
-		_addGrantor(account, isUniformGrantor);
-	}
+    function addGrantor(address account, bool isUniformGrantor) public onlyOwner {
+        _addGrantor(account, isUniformGrantor);
+    }
 
-	function removeGrantor(address account) public onlyOwner {
-		_removeGrantor(account);
-	}
+    function removeGrantor(address account) public onlyOwner {
+        _removeGrantor(account);
+    }
 
-	function _addGrantor(address account, bool isUniformGrantor) private {
-		require(account != address(0));
-		_grantors.add(account);
-		_isUniformGrantor[account] = isUniformGrantor;
-		emit GrantorAdded(account);
-	}
+    function _addGrantor(address account, bool isUniformGrantor) private {
+        require(account != address(0));
+        _grantors.add(account);
+        _isUniformGrantor[account] = isUniformGrantor;
+        emit GrantorAdded(account);
+    }
 
-	function _removeGrantor(address account) private {
-		require(account != address(0));
-		_grantors.remove(account);
-		emit GrantorRemoved(account);
-	}
+    function _removeGrantor(address account) private {
+        require(account != address(0));
+        _grantors.remove(account);
+        emit GrantorRemoved(account);
+    }
 
-	function isUniformGrantor(address account) internal view returns (bool) {
-		return isGrantor(account) && _isUniformGrantor[account];
-	}
+    function isUniformGrantor(address account) internal view returns (bool) {
+        return isGrantor(account) && _isUniformGrantor[account];
+    }
 
-	modifier onlyUniformGrantor() {
-		require(isUniformGrantor(msg.sender)); // Only grantor role can do this.
-		_;
-	}
+    modifier onlyUniformGrantor() {
+        require(isUniformGrantor(msg.sender)); // Only grantor role can do this.
+        _;
+    }
 
-	// =====================================================================================================================
-	// === Overridden ERC20 functionality
-	// =====================================================================================================================
+    // =====================================================================================================================
+    // === Overridden ERC20 functionality
+    // =====================================================================================================================
 
-	/**
-	 * Ensure there is no way for the contract to end up with no owner. That would inadvertently result in
-	 * token grant administration becoming impossible. We override this to always disallow it.
-	 */
-	function renounceOwnership() public onlyOwner {
-		require(false, 'renounceOwnership() disallowed!');
-	}
+    /**
+     * Ensure there is no way for the contract to end up with no owner. That would inadvertently result in
+     * token grant administration becoming impossible. We override this to always disallow it.
+     */
+    function renounceOwnership() public onlyOwner {
+        require(false, 'renounceOwnership() disallowed!');
+    }
 
-	/**
-	 * @dev Allows the current owner to transfer control of the contract to a newOwner.
-	 * @param newOwner The address to transfer ownership to.
-	 */
-	function transferOwnership(address newOwner) public onlyOwner {
-		_removeGrantor(msg.sender);
-		super.transferOwnership(newOwner);
-		_addGrantor(newOwner, OWNER_UNIFORM_GRANTOR_FLAG);
-	}
+    /**
+     * @dev Allows the current owner to transfer control of the contract to a newOwner.
+     * @param newOwner The address to transfer ownership to.
+     */
+    function transferOwnership(address newOwner) public onlyOwner {
+        _removeGrantor(msg.sender);
+        super.transferOwnership(newOwner);
+        _addGrantor(newOwner, OWNER_UNIFORM_GRANTOR_FLAG);
+    }
 }
