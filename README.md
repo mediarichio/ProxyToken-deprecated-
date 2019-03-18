@@ -34,7 +34,7 @@ Clone it to a folder called `openzeppelin-solidity` which is a sibling of `Proxy
 
 ### Installing
 
-After you've pulled the code, install node modules:
+After you've pulled the code, open a command propmt in ProxyToken and install node modules:
 
 First, install NPM (if you haven't already)
 
