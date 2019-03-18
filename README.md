@@ -1,4 +1,4 @@
-# Project Title
+# MediaRich Proxy Token
 
 Smart contracts for the MediaRich.io proxy token, the ICO token which later can be redeemed for the Dyncoin ecosystem token. 
 
