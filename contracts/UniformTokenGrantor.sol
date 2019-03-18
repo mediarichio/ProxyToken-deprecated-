@@ -20,6 +20,7 @@ contract UniformTokenGrantor is ERC20Vestable {
 
     mapping (address => restrictions) private _restrictions;
 
+
     // =====================================================================================================================
     // === Uniform token grant setup
     // === Methods used by owner to set up uniform grants on restricted grantor
@@ -89,6 +90,7 @@ contract UniformTokenGrantor is ERC20Vestable {
 
         return true;
     }
+
 
     // =====================================================================================================================
     // === Uniform token grants

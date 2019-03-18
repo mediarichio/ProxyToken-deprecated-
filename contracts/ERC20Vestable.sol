@@ -21,34 +21,34 @@ import "./IERC20Vestable.sol";
  *
  *   Two types of toke grants are supported:
  *   - Irrevocable grants, intended for use in cases when vesting tokens have been issued in exchange
- *	 for value, such as with tokens that have been purchased in an ICO.
+ *     for value, such as with tokens that have been purchased in an ICO.
  *   - Revocable grants, intended for use in cases when vesting tokens have been gifted to the holder,
- *	 such as with employee grants that are given as compensation.
+ *     such as with employee grants that are given as compensation.
  */
 contract ERC20Vestable is ERC20, ERC20SafeMethods, GrantorRole, IERC20Vestable {
     using SafeMath for uint256;
 
-    uint32 private constant THOUSAND_YEARS_DAYS = 365243;	   // See https://www.timeanddate.com/date/durationresult.html?m1=1&d1=1&y1=2000&m2=1&d2=1&y2=3000
+    uint32 private constant THOUSAND_YEARS_DAYS = 365243;       // See https://www.timeanddate.com/date/durationresult.html?m1=1&d1=1&y1=2000&m2=1&d2=1&y2=3000
     uint32 private constant TEN_YEARS_DAYS = THOUSAND_YEARS_DAYS / 100;
-    uint32 private constant SECONDS_PER_DAY = 24*60*60;		 // 86400 seconds in a day
-    uint32 private constant JAN_1_2000_SECONDS = 946684800;	 // Saturday, January 1, 2000 0:00:00 (GMT) (see https://www.epochconverter.com/)
+    uint32 private constant SECONDS_PER_DAY = 24*60*60;         // 86400 seconds in a day
+    uint32 private constant JAN_1_2000_SECONDS = 946684800;     // Saturday, January 1, 2000 0:00:00 (GMT) (see https://www.epochconverter.com/)
     uint32 private constant JAN_1_2000_DAYS = JAN_1_2000_SECONDS /SECONDS_PER_DAY;
     uint32 private constant JAN_1_3000_DAYS = JAN_1_2000_DAYS + THOUSAND_YEARS_DAYS;
 
     struct vestingSchedule{
         bool isValid;
         uint32 cliffDuration;       // Duration of the cliff, with respect to the grant start day, in days.
-        uint32 duration;	   		// Duration of the vesting schedule, with respect to the grant start day, in days.
-        uint32 interval;			// Duration in days of the vesting interval.
-        bool isRevocable;		    // true if the vesting option is revocable (a gift), false if irrevocable (purchased)
+        uint32 duration;            // Duration of the vesting schedule, with respect to the grant start day, in days.
+        uint32 interval;            // Duration in days of the vesting interval.
+        bool isRevocable;           // true if the vesting option is revocable (a gift), false if irrevocable (purchased)
     }
 
     struct tokenGrant{
-        bool isActive;			    // true if this vesting entry is active and in-effect entry.
-        bool wasRevoked;			// true if this vesting schedule was revoked.
-        uint32 startDay;	   		// Start day of the grant, in days since the UNIX epoch (start of day).
-        uint256 amount;			    // Total number of tokens that vest.
-        address vestingLocation;	// Address of wallet that is holding the vesting schedule.
+        bool isActive;              // true if this vesting entry is active and in-effect entry.
+        bool wasRevoked;            // true if this vesting schedule was revoked.
+        uint32 startDay;            // Start day of the grant, in days since the UNIX epoch (start of day).
+        uint256 amount;             // Total number of tokens that vest.
+        address vestingLocation;    // Address of wallet that is holding the vesting schedule.
         address grantor;            // Grantor that made the grant
     }
 
@@ -113,7 +113,7 @@ contract ERC20Vestable is ERC20, ERC20SafeMethods, GrantorRole, IERC20Vestable {
         require(_hasVestingSchedule(vestingLocation), 'The referenced vesting schedule does not exist.');
 
         // Transfer the total number of tokens from grantor into the account's holdings.
-        _transfer(msg.sender, beneficiary, totalAmount);		// Emits a Transfer event.
+        _transfer(msg.sender, beneficiary, totalAmount);        // Emits a Transfer event.
 
         // Create and populate a token grant, referencing vesting schedule.
         _tokenGrants[beneficiary] = tokenGrant(
@@ -177,6 +177,7 @@ contract ERC20Vestable is ERC20, ERC20SafeMethods, GrantorRole, IERC20Vestable {
             startDay, duration, cliffDuration, interval,
             isRevocable);
     }
+
 
     // =====================================================================================================================
     // === Check vesting.
@@ -331,6 +332,7 @@ contract ERC20Vestable is ERC20, ERC20SafeMethods, GrantorRole, IERC20Vestable {
         _;
     }
 
+
     // =====================================================================================================================
     // === Grant revocation
     // =====================================================================================================================
@@ -351,7 +353,7 @@ contract ERC20Vestable is ERC20, ERC20SafeMethods, GrantorRole, IERC20Vestable {
         // Make sure grantor can only revoke from own pool.
         require(msg.sender == owner() || msg.sender == grant.grantor, 'Only owner or original grantor may revoke this grant.');
         // Make sure a vesting schedule has previously been set.
-        require(grant.isActive,	'No active vesting schedule exists for this account.');
+        require(grant.isActive,    'No active vesting schedule exists for this account.');
         // Make sure it's revocable.
         require(vesting.isRevocable, 'The vesting schedule for this account is irrevocable.');
         // Fail on likely erroneous input.
@@ -362,14 +364,14 @@ contract ERC20Vestable is ERC20, ERC20SafeMethods, GrantorRole, IERC20Vestable {
         notVestedAmount = _getNotVestedAmount(grantHolder, onDay);
 
         // Use _approve() to forcibly approve grantor to take back not-vested tokens from grantHolder.
-        _approve(grantHolder, grant.grantor, notVestedAmount);		// Emits an Approval Event.
-        transferFrom(grantHolder, grant.grantor, notVestedAmount);	// Emits a Transfer and an Approval Event.
+        _approve(grantHolder, grant.grantor, notVestedAmount);        // Emits an Approval Event.
+        transferFrom(grantHolder, grant.grantor, notVestedAmount);    // Emits a Transfer and an Approval Event.
 
         // Kill the grant by updating wasRevoked and isActive.
         _tokenGrants[grantHolder].wasRevoked = true;
         _tokenGrants[grantHolder].isActive = false;
 
-        emit GrantRevoked(grantHolder, onDay);				  // Emits the GrantRevoked event.
+        emit GrantRevoked(grantHolder, onDay);                  // Emits the GrantRevoked event.
         return true;
     }
 
