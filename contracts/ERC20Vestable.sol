@@ -28,6 +28,8 @@ import "./IERC20Vestable.sol";
 contract ERC20Vestable is ERC20, ERC20SafeMethods, GrantorRole, IERC20Vestable {
     using SafeMath for uint256;
 
+    // Date-related constants for sanity-checking dates to reject obvious erroneous inputs
+    // and conversions from seconds to days and years that are more or less leap year-aware.
     uint32 private constant THOUSAND_YEARS_DAYS = 365243;       // See https://www.timeanddate.com/date/durationresult.html?m1=1&d1=1&y1=2000&m2=1&d2=1&y2=3000
     uint32 private constant TEN_YEARS_DAYS = THOUSAND_YEARS_DAYS / 100;
     uint32 private constant SECONDS_PER_DAY = 24*60*60;         // 86400 seconds in a day
@@ -36,7 +38,7 @@ contract ERC20Vestable is ERC20, ERC20SafeMethods, GrantorRole, IERC20Vestable {
     uint32 private constant JAN_1_3000_DAYS = JAN_1_2000_DAYS + THOUSAND_YEARS_DAYS;
 
     struct vestingSchedule{
-        bool isValid;
+        bool isValid;               // true if an entry exists and is valid
         uint32 cliffDuration;       // Duration of the cliff, with respect to the grant start day, in days.
         uint32 duration;            // Duration of the vesting schedule, with respect to the grant start day, in days.
         uint32 interval;            // Duration in days of the vesting interval.
@@ -57,10 +59,22 @@ contract ERC20Vestable is ERC20, ERC20SafeMethods, GrantorRole, IERC20Vestable {
 
 
     // =====================================================================================================================
-    // === Token grants (unrestricted)
-    // === Methods to be used for administratively creating tokens.
+    // === Token grants (general-purpose)
+    // === Methods to be used for administratively creating one-off token grants and vesting schedules.
     // =====================================================================================================================
 
+    /**
+     * @dev Establishes a vesting schedule in the given account.
+     *
+     * @param vestingLocation = Account into which to store the vesting schedule. Can be the account
+     *   of the beneficiary (for one-off grants) or the account of the grantor (for uniform grants
+     *   made from grant pools).
+     * @param cliffDuration = Duration of the cliff, with respect to the grant start day, in days.
+     * @param duration = Duration of the vesting schedule, with respect to the grant start day, in days.
+     * @param interval = Number of days between vesting increases.
+     * @param isRevocable = True if the grant can be revoked (i.e. was a gift) or false if it cannot
+     *   be revoked (i.e. tokens were purchased).
+     */
     function _setVestingSchedule(
         address vestingLocation,
         uint32 cliffDuration, uint32 duration, uint32 interval,
@@ -98,6 +112,20 @@ contract ERC20Vestable is ERC20, ERC20SafeMethods, GrantorRole, IERC20Vestable {
         return _vestingSchedules[account].isValid;
     }
 
+    /**
+     * @dev Immediately grants tokens to an account, referencing a vesting schedule which may be
+     * stored in the same account (individual/one-off) or in a different account (shared/uniform).
+     *
+     * @param beneficiary = Address to which tokens will be granted.
+     * @param totalAmount = Total number of tokens to deposit into the account.
+     * @param vestingAmount = Out of totalAmount, the number of tokens subject to vesting.
+     * @param startDay = Start day of the grant's vesting schedule, in days since the UNIX epoch
+     *   (start of day). The startDay may be given as a date in the future or in the past, going as far
+     *   back as year 2000.
+     * @param vestingLocation = Account where the vesting schedule is held (must already exist).
+     * @param grantor = Account which performed the grant. Also the account from where the granted
+     *   funds will be withdrawn.
+     */
     function _grantVestingTokens(
         address beneficiary, uint256 totalAmount, uint256 vestingAmount, uint32 startDay, address vestingLocation, address grantor) internal returns (bool) {
         // Make sure no prior grant is in effect.
@@ -195,9 +223,7 @@ contract ERC20Vestable is ERC20, ERC20SafeMethods, GrantorRole, IERC20Vestable {
     }
 
     /**
-     * @dev Immediately revokes a revocable grant. The amount that is not vested out of the vestable
-     * tokens in the vesting schedule as of onDate. If there's no vesting schedule then all vestable
-     * tokens are considered to be not vested.
+     * @dev Determines the amount of tokens that have not vested in the given account.
      *
      * The math is: not vested amount = vesting amount * (end date - on date)/(end date - start date)
      *
@@ -241,10 +267,11 @@ contract ERC20Vestable is ERC20, ERC20SafeMethods, GrantorRole, IERC20Vestable {
     }
 
     /**
-     * @dev the amount of 'amount' that is vested out of the vestable tokens in the vesting schedule
-     * as of 'onDate'. If there's no vesting schedule then 0 tokens are considered to be vested.
+     * @dev Computes the amount of funds in the given account which are available for use as of
+     * the given day. If there's no vesting schedule then 0 tokens are considered to be vested and
+     * this just returns the full account balance.
      *
-     * The math is: notVestedAmount = total vestable * (end date - on date)/(end date - start date)
+     * The math is: available amount = total funds - notVestedAmount.
      *
      * @param grantHolder = The account to check.
      * @param onDay = The day to check for, in days since the UNIX epoch.
@@ -257,7 +284,8 @@ contract ERC20Vestable is ERC20, ERC20SafeMethods, GrantorRole, IERC20Vestable {
 
     /**
      * @dev returns all information about the grant's vesting as of the given day
-     * for the given account. Only callable by the account holder or a grantor.
+     * for the given account. Only callable by the account holder or a grantor, so
+     * this is mainly intended for administrative use.
      *
      * @param grantHolder = The address to do this for.
      * @param onDayOrToday = The day to check for, in days since the UNIX epoch. Can pass
@@ -294,7 +322,7 @@ contract ERC20Vestable is ERC20, ERC20SafeMethods, GrantorRole, IERC20Vestable {
 
     /**
      * @dev returns all information about the grant's vesting as of the given day
-     * for the current account.
+     * for the current account, to be called by the account holder.
      *
      * @param onDayOrToday = The day to check for, in days since the UNIX epoch. Can pass
      *   the special value 0 to indicate today.
@@ -338,8 +366,9 @@ contract ERC20Vestable is ERC20, ERC20SafeMethods, GrantorRole, IERC20Vestable {
     // =====================================================================================================================
 
     /**
-     * @dev If the account has a revocable grant, this forces the grant to end at end-of-day on
-     * the given date. All tokens that would no longer vest are returned to the contract owner.
+     * @dev If the account has a revocable grant, this forces the grant to end based on computing
+     * the amount vested up to the given date. All tokens that would no longer vest are returned
+     * to the account of the original grantor.
      *
      * @param grantHolder = Address to which tokens will be granted.
      * @param onDay = The date upon which the vesting schedule will be effectively terminated,
