@@ -392,7 +392,7 @@ contract ERC20Vestable is ERC20, ERC20SafeMethods, GrantorRole, IERC20Vestable {
 
         notVestedAmount = _getNotVestedAmount(grantHolder, onDay);
 
-        // Use _approve() to forcibly approve grantor to take back not-vested tokens from grantHolder.
+        // Use ERC20 _approve() to forcibly approve grantor to take back not-vested tokens from grantHolder.
         _approve(grantHolder, grant.grantor, notVestedAmount);        // Emits an Approval Event.
         transferFrom(grantHolder, grant.grantor, notVestedAmount);    // Emits a Transfer and an Approval Event.
 

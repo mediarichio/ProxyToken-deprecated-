@@ -24,7 +24,7 @@ Many of these capabilities are intended to help make it easy for us to manage ex
 
 ## Getting Started
 
-The project requires node.js. I'm using node v10.15.1. The node modules/versions you need are enumerated in `install.bat` and `package.json`.
+The project requires node.js. I'm using node v10.15.1. The node modules/versions you need are enumerated in `package.json`.
 
 ### Prerequisites
 
@@ -45,7 +45,7 @@ npm install npm -g
 And then the needed modules:
 
 ```
-npm install --save mocha@^5.1.1  colors  solc@^0.5.6  web3@^1.0.0-beta.37  ganache-cli@^6.4.1  truffle-hdwallet-provider@0.0.5
+npm install
 ```
 
 At this time, the only thing you can do next is run the tests. I'm working on some deployment tools for testing on an Ethereum testnet, but it's not ready yet.
