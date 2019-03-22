@@ -39,6 +39,8 @@ After you've pulled the code, open a command prompt in `ProxyToken` and install 
 First, install NPM (if you haven't already)
 
 ```
+cd ProxyToken
+mkdir output
 npm install npm -g
 ```
 
