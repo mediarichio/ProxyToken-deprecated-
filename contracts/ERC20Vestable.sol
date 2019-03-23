@@ -1,6 +1,6 @@
 pragma solidity ^0.5.2;
 
-import "..\..\openzeppelin-solidity\contracts\token\ERC20\ERC20Pausable.sol";
+import "../../openzeppelin-solidity/contracts/token/ERC20/ERC20Pausable.sol";
 import "./ERC20SafeMethods.sol";
 import "./GrantorRole.sol";
 import "./IERC20Vestable.sol";
