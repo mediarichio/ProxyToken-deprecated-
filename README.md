@@ -40,7 +40,6 @@ First, install NPM (if you haven't already)
 
 ```
 cd ProxyToken
-mkdir output
 npm install npm -g
 ```
 
@@ -54,13 +53,19 @@ At this time, the only thing you can do next is run the tests. I'm working on so
 
 ## Running the tests
 
+Create the output directory for the tests (one-time only):
+
+```
+mkdir output
+```
+
 Run the tests by issuing the command:
 
 ```
 npm test
 ```
 
-or in a DOS command prompt, simply:
+(or in a DOS command prompt):
 
 ```
 test.bat
@@ -68,10 +73,9 @@ test.bat
 
 ### Breakdown into end-to-end tests
 
-There is a comprehensive set of tests written using Mocha to exercise functions of the smart contract that aren't already covered by openzeppelin-solidity, which has tests for the underlying contracts which were not modified. Web3 and ganache are used to form a test blockchain which the tests are run against.
+There is a comprehensive set of tests written using Mocha that exercise functions of the smart contract that aren't already covered by openzeppelin-solidity, which has tests for the contracts implemented for this project. Web3 and ganache allow the tests to be run quickly using a local JS blockchain.
 
-The testing style used here is end-to-end, or functional in nature. While these tests run pretty quickly, technically they're not unit tests. I've attempted to cover all major functionality, but there is still work needed to be done, for example, there are no tests yet to verify event generation.
- 
+The testing style is end-to-end functional testing. While these tests run pretty quickly, technically they're not unit tests. I didn't use mocks or the openzeppelin-solidity conventions for test creation because I'm not yet fluent in those techniques, but that would be a good next step. I have tried to cover all major functionality, but there is still work needed to be done. For example, there are not yet any tests that verify event generation. 
 
 ## Deployment
 
