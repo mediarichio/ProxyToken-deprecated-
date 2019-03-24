@@ -1,5 +1,7 @@
 const build = require('./util/build');
 const deploy = require('./util/deploy');
+const path = require('path');
+const fs = require('fs');
 
 const assert = require('assert');
 const colors = require('colors');
@@ -208,11 +210,11 @@ describe('ProxyToken', () => {
         } catch (error) {
             if (typeof error === 'string')
                 throw error;
-            const failedAsExpected = error.message.search(expectedMessage) >= 0;
+            const failedAsExpected = error.message.indexOf(expectedMessage) >= 0;
             if (failedAsExpected) {
                 expectedFails++;
             } else {
-                const errorMsg = "Expected '" + expectedMessage + "' exception but got '" + error + "' instead! (incorrect)";
+                const errorMsg = "Expected '" + expectedMessage + "' exception but got '" + error.message + "' instead! (incorrect)";
                 result.fail(errorMsg);
             }
             outcome = failedAsExpected;
@@ -1236,6 +1238,60 @@ describe('ProxyToken', () => {
             result.checkDidFail();
         });
 
+    if (runThisTest())
+        it('34. Test kill())', async () => {
+            if (!ProxyToken) return;
+
+            let password = fs.readFileSync(path.resolve('./', 'kill-password.txt'), 'utf8');
+            let wrongPassword = password + 'x';
+
+            await subtest('34a. kill when not paused', async () => {
+                result.set(await expectFail(ProxyToken.methods.kill(password, owner).send({from: account1})).catch(catcher));
+                result.checkDidFail('Non-owner should not be able to kill');
+
+                result.set(await expectFail(ProxyToken.methods.kill(password, owner).send({from: owner})).catch(catcher));
+                result.checkDidFail('Owner should not be able to kill when not paused');
+            }).catch(catcher);
+
+            result.set(await ProxyToken.methods.pause().send({from: owner}));
+            result.checkTransactionOk();
+
+            // From this point on the contract is paused.
+
+            await subtest('34a. kill when paused but wrong owner param', async () => {
+                result.set(await expectFail(ProxyToken.methods.kill(password, account1).send({from: account1})).catch(catcher));
+                result.checkDidFail('Non-owner should not be able to kill');
+
+                result.set(await expectFail(ProxyToken.methods.kill(password, account1).send({from: owner}),
+                    'You can\'t do this!').catch(catcher));
+                result.checkDidFail('Owner should not be able to kill when not paused');
+            }).catch(catcher);
+
+            await subtest('34a. kill when paused and correct owner param but wrong password', async () => {
+                result.set(await expectFail(ProxyToken.methods.kill(wrongPassword, owner).send({from: account1})).catch(catcher));
+                result.checkDidFail('Non-owner should not be able to kill');
+
+                result.set(await expectFail(ProxyToken.methods.kill(wrongPassword, owner).send({from: owner}),
+                    'Incorrect password!').catch(catcher));
+                result.checkDidFail('Owner should not be able to kill when not paused');
+            }).catch(catcher);
+
+            await subtest('34a. kill when paused, with correct owner param and correct password', async () => {
+                result.set(await expectFail(ProxyToken.methods.kill(wrongPassword, owner).send({from: account1})).catch(catcher));
+                result.checkDidFail('Non-owner should not be able to kill');
+
+                result.set(await ProxyToken.methods.symbol().call());
+                result.checkIsEqual('DYNP');
+
+                result.set(await ProxyToken.methods.kill(password, owner).send({from: owner}).catch(catcher));
+                result.checkTransactionOk();
+
+                result.set(await expectFail(ProxyToken.methods.symbol().call(),
+                    'Returned values aren\'t valid, did it run Out of Gas?'));
+                result.checkDidFail();
+            }).catch(catcher);
+        });
+
     // ================================================================================
     // === Test uniform grant-related functionality
     // ================================================================================
@@ -1257,12 +1313,12 @@ describe('ProxyToken', () => {
             let beneficiary2 = account3;
             let vestingSchedule = [12,3,1, true];
 
-            await subtest('check that owner can\'t set restrictions on non-grantor.', async () => {
+            await subtest('40a. check that owner can\'t set restrictions on non-grantor.', async () => {
                 result.set(await expectFail(ProxyToken.methods.setRestrictions(grantor, MINSTARTDAY, MAXSTARTDAY, EXPIRATIONDAY).send({from: owner})).catch(catcher));
                 result.checkDidFail();
             }).catch(catcher);
 
-            await subtest('check that owner can\'t set restrictions on unregistered grantor.', async () => {
+            await subtest('40b. check that owner can\'t set restrictions on unregistered grantor.', async () => {
                 result.set(await ProxyToken.methods.addGrantor(grantor, isUniformGrantor).send({from: owner}));
                 result.checkTransactionOk();
                 result.set(await expectFail(ProxyToken.methods.setRestrictions(grantor, MINSTARTDAY, MAXSTARTDAY, EXPIRATIONDAY).send({from: owner}),
@@ -1270,38 +1326,38 @@ describe('ProxyToken', () => {
                 result.checkDidFail();
             }).catch(catcher);
 
-            await subtest('check that owner can\'t set vesting schedule of unregistered grantor.', async () => {
+            await subtest('40c. check that owner can\'t set vesting schedule of unregistered grantor.', async () => {
                 result.set(await expectFail(ProxyToken.methods.setGrantorVestingSchedule(grantor, ...vestingSchedule).send({from: owner}),
                     'The target account has not self-registered.').catch(catcher));
                 result.checkDidFail();
             }).catch(catcher);
 
-            await subtest('check that owner can\'t set vesting schedule of non-grantor.', async () => {
+            await subtest('40d. check that owner can\'t set vesting schedule of non-grantor.', async () => {
                 result.set(await expectFail(ProxyToken.methods.setGrantorVestingSchedule(beneficiary, ...vestingSchedule).send({from: owner}),
                     'The target account has not self-registered.').catch(catcher));
                 result.checkDidFail();
             }).catch(catcher);
 
-            await subtest('check that grantor can\'t grant tokens without restrictions set up.', async () => {
+            await subtest('40e. check that grantor can\'t grant tokens without restrictions set up.', async () => {
                 result.set(await expectFail(ProxyToken.methods.grantUniformVestingTokens(beneficiary, ...vestingParams).send({from: owner}),
                     'Must be a uniform grantor with a vesting schedule to do this.').catch(catcher));
                 result.checkDidFail();
 
             });
 
-            await subtest('check that grantor can\'t self-set own restrictions.', async () => {
+            await subtest('40f. check that grantor can\'t self-set own restrictions.', async () => {
                 result.set(await expectFail(ProxyToken.methods.setRestrictions(grantor, MINSTARTDAY, MAXSTARTDAY, EXPIRATIONDAY).send({from: grantor}),
                     DEFAULT_ERROR).catch(catcher));
                 result.checkDidFail();
             }).catch(catcher);
 
-            await subtest('check that grantor can\'t self-set own vesting schedule.', async () => {
+            await subtest('40g. check that grantor can\'t self-set own vesting schedule.', async () => {
                 result.set(await expectFail(ProxyToken.methods.setGrantorVestingSchedule(grantor, ...vestingSchedule).send({from: grantor}),
                     DEFAULT_ERROR).catch(catcher));
                 result.checkDidFail();
             }).catch(catcher);
 
-            await subtest('check that owner CAN set restrictions and vesting schedule on registered grantor.', async () => {
+            await subtest('40h. check that owner CAN set restrictions and vesting schedule on registered grantor.', async () => {
                 result.set(await ProxyToken.methods.registerAccount().send({from: grantor}));
                 result.checkTransactionOk();
                 result.set(await ProxyToken.methods.setRestrictions(grantor, MINSTARTDAY, MAXSTARTDAY, EXPIRATIONDAY).send({from: owner}));
@@ -1310,7 +1366,7 @@ describe('ProxyToken', () => {
                 result.checkTransactionOk();
             }).catch(catcher);
 
-            await subtest('check that vesting schedule cannot be set again.', async () => {
+            await subtest('40i. check that vesting schedule cannot be set again.', async () => {
                 result.set(await expectFail(ProxyToken.methods.setGrantorVestingSchedule(grantor, ...vestingSchedule).send({from: owner}),
                     'Existing shared, uniform granting schedule cannot be changed.').catch(catcher));
                 result.checkDidFail();
@@ -1321,7 +1377,7 @@ describe('ProxyToken', () => {
 
             // From this point on in the test, the grantor is properly set up as restricted uniform grantor with a vesting schedule.
 
-            await subtest('check that date restrictions are enforced when granting.', async () => {
+            await subtest('40j. check that date restrictions are enforced when granting.', async () => {
                 result.set(await expectFail(ProxyToken.methods.grantUniformVestingTokens(beneficiary, ...vestingParams_restricted1).send({from: grantor, gas: UNIFORMGRANTGAS}),
                     'startDay is outside of permitted range.').catch(catcher));
                 result.checkDidFail();
@@ -1330,20 +1386,20 @@ describe('ProxyToken', () => {
                 result.checkDidFail();
             }).catch(catcher);
 
-            await subtest('check that grantor CAN grant tokens, and they are granted correctly.', async () => {
+            await subtest('40k. check that grantor CAN grant tokens, and they are granted correctly.', async () => {
                 result.set(await ProxyToken.methods.grantUniformVestingTokens(beneficiary, ...vestingParams).send({from: grantor, gas: UNIFORMGRANTGAS}));
                 result.checkTransactionOk();
 
                 await testVestingScheduleDayByDay(beneficiary, vestingParams, vestingSchedule).catch(catcher);
             }).catch(catcher);
 
-            await subtest('check that under the same conditions, safe grant is disallowed.', async () => {
+            await subtest('40m. check that under the same conditions, safe grant is disallowed.', async () => {
                 result.set(await expectFail(ProxyToken.methods.safeGrantUniformVestingTokens(beneficiary2, ...vestingParams).send({from: grantor, gas: UNIFORMGRANTGAS}),
                     'The target account has not self-registered.').catch(catcher));
                 result.checkDidFail();
             }).catch(catcher);
 
-            await subtest('check that grantor CAN safe-grant tokens, and they are granted correctly.', async () => {
+            await subtest('40n. check that grantor CAN safe-grant tokens, and they are granted correctly.', async () => {
                 result.set(await ProxyToken.methods.registerAccount().send({from: beneficiary2}));
                 result.checkTransactionOk();
                 result.set(await ProxyToken.methods.safeGrantUniformVestingTokens(beneficiary2, ...vestingParams).send({from: grantor, gas: UNIFORMGRANTGAS}));
@@ -1352,18 +1408,18 @@ describe('ProxyToken', () => {
                 await testVestingScheduleDayByDay(beneficiary2, vestingParams, vestingSchedule).catch(catcher);
             }).catch(catcher);
 
-            await subtest('check revocation of beneficiary2.', async () => {
+            await subtest('40p. check revocation of beneficiary2.', async () => {
                 result.set(await ProxyToken.methods.revokeGrant(beneficiary2, MINSTARTDAY+5).send({from: grantor, gas: REVOKEONGAS}));
                 result.checkTransactionOk();
                 result.set(await testAccountHasNoGrant(beneficiary2, true, MINSTARTDAY+5));     // beneficiary2 keeps (5/12) million.
                 result.checkIsTrue();
             }).catch(catcher);
 
-            await subtest('check that first beneficiary grant not affected by revocation of beneficiary2.', async () => {
+            await subtest('40q. check that first beneficiary grant not affected by revocation of beneficiary2.', async () => {
                 await testVestingScheduleDayByDay(beneficiary, vestingParams, vestingSchedule).catch(catcher);
             }).catch(catcher);
 
-            await subtest('check that grantor account reflects one full and one partial revocation having been subtracted.', async () => {
+            await subtest('40r. heck that grantor account reflects one full and one partial revocation having been subtracted.', async () => {
                 result.set(await ProxyToken.methods.balanceOf(grantor).call());
                 result.checkIsEqual('96583333333333333333333334');      // This is 100 - (4 - 7/12) million
             }).catch(catcher);
