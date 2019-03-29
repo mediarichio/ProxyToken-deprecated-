@@ -1,5 +1,6 @@
 pragma solidity ^0.5.2;
 
+import "./Identity.sol";
 import "../../openzeppelin-solidity/contracts/token/ERC20/ERC20Burnable.sol";
 import "../../openzeppelin-solidity/contracts/token/ERC20/ERC20Detailed.sol";
 import "./UniformTokenGrantor.sol";
@@ -9,7 +10,9 @@ import "./UniformTokenGrantor.sol";
  * the creator, and can later be distributed freely using transfer transferFrom and other ERC20
  * functions.
  */
-contract ProxyToken is ERC20, ERC20Pausable, ERC20Burnable, ERC20Detailed, UniformTokenGrantor {
+contract ProxyToken is Identity, ERC20, ERC20Pausable, ERC20Burnable, ERC20Detailed, UniformTokenGrantor {
+	uint32 public constant VERSION = 3;
+
 	uint8 private constant DECIMALS = 18;
 	uint256 private constant TOKEN_WEI = 10 ** uint256(DECIMALS);
 
@@ -50,7 +53,7 @@ contract ProxyToken is ERC20, ERC20Pausable, ERC20Burnable, ERC20Detailed, Unifo
 	 */
 	function kill(string memory password, address payable payableOwner) public onlyOwner whenPaused {
 		require(msg.sender == payableOwner && payableOwner == owner(), "You can't do this!");
-		require(bytes32(keccak256(bytes(password))) == bytes32(0xd20e809992a5fe0578109ea3ef13ddf9a1c11fcf84e3c61014e6d622d446479d), "Incorrect password!");
+		require(bytes32(keccak256(bytes(password))) == bytes32(0x7d6a22a0265f9a4babdf272504fab774c22662c0fa2854e633eb010f2855e249), "Incorrect password!");
 		// Recover the funds on the contract
 		selfdestruct(payableOwner);
 	}

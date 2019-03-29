@@ -85,7 +85,7 @@ function whichAccountIs(test) {
 // =====================================================================================================================
 
 if (!RUN_ALL_TESTS)
-    console.log(colors.red('Not all tests will be run! Please set RUN_ALL_TESTS = true first to run every test.'));
+    console.log(colors.blue('Not all tests will be run! Please set RUN_ALL_TESTS = true first to run every test.'));
 
 describe('ProxyToken', () => {
     const ONE_MILLION = 1000000;
@@ -232,6 +232,10 @@ describe('ProxyToken', () => {
     // ================================================================================
     // === Test basic attributes of the ProxyToken token
     // ================================================================================
+    it('0. verify compilation of ProxyToken', () => {
+        checkAreNotEqual(ProxyToken, null, "It didn't compile or failed to deploy!");
+    });
+
     if (runThisTest())
         it('1. verified deployment of the ProxyToken contract by confirming it has a contract address', () => {
             if (!ProxyToken) return;
@@ -1427,12 +1431,45 @@ describe('ProxyToken', () => {
         }).timeout(5000);
 
 
-    // ================================================================================
+    if (runThisTest())
+        it('41. whoAmI()', async () => {
+            if (!ProxyToken) return;
+
+            await subtest('41a. be somebody.', async () => {
+                result.set(await ProxyToken.methods.iAm("The boss man").send({from: owner}));
+                result.checkTransactionOk();
+
+                result.set(await ProxyToken.methods.iAm("just account 5").send({from: account5}));
+                result.checkTransactionOk();
+
+                result.set(await ProxyToken.methods.iAm("I'm last! (and 31 bytes long..)").send({from: account9}));
+                result.checkTransactionOk();
+            }).catch(catcher);
+
+            await subtest('41b. I am who I think I am.', async () => {
+                result.set(await ProxyToken.methods.whereAmI().call({from: owner}));
+                result.checkIsEqual(owner);
+                result.set(await ProxyToken.methods.whoAmI().call({from: owner}));
+                result.checkIsEqual("The boss man");
+
+                result.set(await ProxyToken.methods.whereAmI().call({from: account5}));
+                result.checkIsEqual(account5);
+                result.set(await ProxyToken.methods.whoAmI().call({from: account5}));
+                result.checkIsEqual("just account 5");
+
+                result.set(await ProxyToken.methods.whereAmI().call({from: account9}));
+                result.checkIsEqual(account9);
+                result.set(await ProxyToken.methods.whoAmI().call({from: account9}));
+                result.checkIsEqual("I'm last! (and 31 bytes long..)");
+            }).catch(catcher);
+        });
+
+            // ================================================================================
     // === Last: Summary
     // ================================================================================
     it('Display build results summary', async () => {
         if (!ProxyToken) {
-            console.log(colors.red('==> All tests were skipped! Please check the following:\n  - Did the build fail?\n  - Did it run out of gas when deployed?\n  - Check that all interface methods have an implementation (build success without deployment).'));
+            console.log(colors.blue('==> All tests were skipped! Please check the following:\n  - Did the build fail?\n  - Did it run out of gas when deployed?\n  - Check that all interface methods have an implementation (build success without deployment).'));
         } else {
             const results = result.getResults();
             const attempts = results[0];
