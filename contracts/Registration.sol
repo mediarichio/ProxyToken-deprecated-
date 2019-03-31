@@ -19,21 +19,21 @@ contract Registration is ERC20, Ownable {
 	 * may require the target account to be a registered account, to protect the system from getting into a
 	 * state where administration or a large amount of funds can become forever inaccessible.
 	 */
-	function registerAccount() public returns (bool) {
+	function registerAccount() public returns (bool ok) {
 		_isRegistered[msg.sender] = true;
 		emit AccountRegistered(msg.sender);
 		return true;
 	}
 
-	function accountIsRegistered(address account) public view returns (bool) {
+	function accountIsRegistered(address account) public view returns (bool isRegistered) {
 		return _isRegistered[account];
 	}
-	function _accountExists(address account) internal view returns (bool) {
+	function _accountExists(address account) internal view returns (bool exists) {
 		return account == msg.sender || _isRegistered[account];
 	}
 
 	modifier onlySafeAccount(address account) {
-		require(_accountExists(account), "The target account has not self-registered.");
+		require(_accountExists(account), "account not registered");
 		_;
 	}
 
@@ -42,17 +42,17 @@ contract Registration is ERC20, Ownable {
 	// === Safe ERC20 methods
 	// =====================================================================================================================
 
-	function safeTransfer(address to, uint256 value) public onlySafeAccount(to) returns (bool) {
+	function safeTransfer(address to, uint256 value) public onlySafeAccount(to) returns (bool ok) {
 		transfer(to, value);
 		return true;
 	}
 
-	function safeApprove(address spender, uint256 value) public onlySafeAccount(spender) returns (bool) {
+	function safeApprove(address spender, uint256 value) public onlySafeAccount(spender) returns (bool ok) {
 		approve(spender, value);
 		return true;
 	}
 
-	function safeTransferFrom(address from, address to, uint256 value) public onlySafeAccount(to) returns (bool) {
+	function safeTransferFrom(address from, address to, uint256 value) public onlySafeAccount(to) returns (bool ok) {
 		transferFrom(from, to, value);
 		return true;
 	}

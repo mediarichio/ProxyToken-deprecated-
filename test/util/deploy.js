@@ -48,7 +48,7 @@ async function deployContract(walletProvider, contractFullPath, doBuild, constru
     if (log) logger.log('Attempting to deploy from account:' + this.accounts[0]);
     this.contract = await new web3.eth.Contract(abi)
         .deploy({data: '0x' + bytecode, arguments: constructorArgs})
-        .send({from: this.accounts[0], gas: '6700000'});
+        .send({from: this.accounts[0], gas: '6720000'});
 
     if (this.contract.options.address == null) {
         if (log) logger.log(colors.red('==> Deploy FAILED!\n'));

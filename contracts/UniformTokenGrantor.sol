@@ -51,14 +51,14 @@ contract UniformTokenGrantor is ERC20Vestable {
 		uint32 maxStartDay,
 		uint32 expirationDay
 	)
-		public
-		onlyOwner
-		onlySafeAccount(grantor)
-		returns (bool)
+	public
+	onlyOwner
+	onlySafeAccount(grantor)
+	returns (bool ok)
 	{
-		require(isUniformGrantor(grantor), "Only unrestricted grantor wallet may receive grant restrictions.");
-		require(maxStartDay > minStartDay, "maxStartDay must be larger than minStartDay.");
-		require(expirationDay > today(), "expirationDay must be after today for granting to be possible.");
+		require(isUniformGrantor(grantor), "uniform grantor only");
+		require(maxStartDay > minStartDay, "invalid maxStartDay");
+		require(expirationDay > today(), "invalid expirationDay");
 
 		// We allow owner to set or change existing specific restrictions.
 		_restrictions[grantor] = restrictions(
@@ -92,15 +92,15 @@ contract UniformTokenGrantor is ERC20Vestable {
 		uint32 interval,
 		bool isRevocable
 	)
-		public
-		onlyOwner
-		onlySafeAccount(grantor)
-		returns (bool)
+	public
+	onlyOwner
+	onlySafeAccount(grantor)
+	returns (bool ok)
 	{
 		// Only allow doing this to restricted grantor role account.
-		require(isUniformGrantor(grantor), "Only unrestricted grantor wallet may receive a uniform vesting schedule.");
+		require(isUniformGrantor(grantor), "uniform grantor only");
 		// Make sure no prior vesting schedule has been set!
-		require(!_hasVestingSchedule(grantor), "Existing shared, uniform granting schedule cannot be changed.");
+		require(!_hasVestingSchedule(grantor), "schedule already exists");
 
 		// The vesting schedule is unique to this grantor wallet and so will be stored here to be
 		// referenced by future grants. Emits VestingScheduleCreated event.
@@ -115,25 +115,25 @@ contract UniformTokenGrantor is ERC20Vestable {
 	// === Methods to be used by exchanges to use for creating tokens.
 	// =====================================================================================================================
 
-	function isUniformGrantorWithSchedule(address account) internal view returns (bool) {
+	function isUniformGrantorWithSchedule(address account) internal view returns (bool ok) {
 		// Check for grantor that has a uniform vesting schedule already set.
 		return isUniformGrantor(account) && _hasVestingSchedule(account);
 	}
 
 	modifier onlyUniformGrantorWithSchedule(address account) {
-		require(isUniformGrantorWithSchedule(account), "Must be a uniform grantor with a vesting schedule to do this.");
+		require(isUniformGrantorWithSchedule(account), "grantor account not ready");
 		_;
 	}
 
 	modifier whenGrantorRestrictionsMet(uint32 startDay) {
 		restrictions storage restriction = _restrictions[msg.sender];
-		require(restriction.isValid, "Restrictions are not set up for grantor.");
+		require(restriction.isValid, "set restrictions first");
 
 		require(
 			startDay >= restriction.minStartDay
-			&& startDay < restriction.maxStartDay, "startDay is outside of permitted range.");
+			&& startDay < restriction.maxStartDay, "startDay too early");
 
-		require(today() < restriction.expirationDay, "Permissions for grantor to make new grants have expired.");
+		require(today() < restriction.expirationDay, "grantor expired");
 		_;
 	}
 
@@ -154,10 +154,10 @@ contract UniformTokenGrantor is ERC20Vestable {
 		uint256 vestingAmount,
 		uint32 startDay
 	)
-		public
-		onlyUniformGrantorWithSchedule(msg.sender)
-		whenGrantorRestrictionsMet(startDay)
-		returns (bool)
+	public
+	onlyUniformGrantorWithSchedule(msg.sender)
+	whenGrantorRestrictionsMet(startDay)
+	returns (bool ok)
 	{
 		// Issue grantor tokens to the beneficiary, using beneficiary's own vesting schedule.
 		// Emits VestingTokensGranted event.
@@ -173,11 +173,11 @@ contract UniformTokenGrantor is ERC20Vestable {
 		uint256 vestingAmount,
 		uint32 startDay
 	)
-		public
-		onlyUniformGrantorWithSchedule(msg.sender)
-		whenGrantorRestrictionsMet(startDay)
-		onlySafeAccount(beneficiary)
-		returns (bool)
+	public
+	onlyUniformGrantorWithSchedule(msg.sender)
+	whenGrantorRestrictionsMet(startDay)
+	onlySafeAccount(beneficiary)
+	returns (bool ok)
 	{
 		// Issue grantor tokens to the beneficiary, using beneficiary's own vesting schedule.
 		// Emits VestingTokensGranted event.

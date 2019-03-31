@@ -19,11 +19,11 @@ contract PasswordProtected {
 	}
 
 	modifier onlyCorrectPassword(string memory password) {
-		require(bytes32(keccak256(bytes(password))) == passwordHash, "Incorrect password!");
+		require(bytes32(keccak256(bytes(password))) == passwordHash, "access denied");
 		_;
 	}
 
-	function changePassword(string memory oldPassword, string memory newPassword) onlyCorrectPassword(oldPassword) public returns (bool) {
+	function changePassword(string memory oldPassword, string memory newPassword) onlyCorrectPassword(oldPassword) public returns (bool ok) {
 		_setNewPassword(newPassword);
 		return true;
 	}

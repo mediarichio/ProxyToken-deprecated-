@@ -39,10 +39,10 @@ contract ERC20Vestable is ERC20, Registration, GrantorRole, IERC20Vestable {
 
 	struct vestingSchedule {
 		bool isValid;               /* true if an entry exists and is valid */
+		bool isRevocable;           /* true if the vesting option is revocable (a gift), false if irrevocable (purchased) */
 		uint32 cliffDuration;       /* Duration of the cliff, with respect to the grant start day, in days. */
 		uint32 duration;            /* Duration of the vesting schedule, with respect to the grant start day, in days. */
 		uint32 interval;            /* Duration in days of the vesting interval. */
-		bool isRevocable;           /* true if the vesting option is revocable (a gift), false if irrevocable (purchased) */
 	}
 
 	struct tokenGrant {
@@ -59,12 +59,14 @@ contract ERC20Vestable is ERC20, Registration, GrantorRole, IERC20Vestable {
 
 
 	// =====================================================================================================================
-	// === Token grants (general-purpose)
-	// === Methods to be used for administratively creating one-off token grants and vesting schedules.
+	// === Methods for administratively creating a vesting schedule for an account.
 	// =====================================================================================================================
 
 	/**
-	 * @dev Establishes a vesting schedule in the given account.
+	 * @dev This one-time operation permanently establishes a vesting schedule in the given account.
+	 *
+	 * For standard grants, this establishes the vesting schedule in the beneficiary's account.
+	 * For uniform grants, this establishes the vesting schedule in the linked grantor's account.
 	 *
 	 * @param vestingLocation = Account into which to store the vesting schedule. Can be the account
 	 *   of the beneficiary (for one-off grants) or the account of the grantor (for uniform grants
@@ -78,27 +80,28 @@ contract ERC20Vestable is ERC20, Registration, GrantorRole, IERC20Vestable {
 	function _setVestingSchedule(
 		address vestingLocation,
 		uint32 cliffDuration, uint32 duration, uint32 interval,
-		bool isRevocable) internal returns (bool) {
+		bool isRevocable) internal returns (bool ok) {
 
 		// Check for a valid vesting schedule given (disallow absurd values to reject likely bad input).
 		require(
 			duration > 0 && duration <= TEN_YEARS_DAYS
 			&& cliffDuration < duration
 			&& interval >= 1,
-			"Parameters must form a valid vesting schedule."
+			"invalid vesting schedule"
 		);
 
 		// Make sure the duration values are in harmony with interval (both should be an exact multiple of interval).
 		require(
 			duration % interval == 0 && cliffDuration % interval == 0,
-			"Both duration and cliffDuration must be an even multiple of interval."
+			"invalid cliff/duration for interval"
 		);
 
 		// Create and populate a vesting schedule.
 		_vestingSchedules[vestingLocation] = vestingSchedule(
 			true/*isValid*/,
-			cliffDuration, duration, interval,
-			isRevocable);
+			isRevocable,
+			cliffDuration, duration, interval
+		);
 
 		// Emit the event and return success.
 		emit VestingScheduleCreated(
@@ -108,9 +111,49 @@ contract ERC20Vestable is ERC20, Registration, GrantorRole, IERC20Vestable {
 		return true;
 	}
 
-	function _hasVestingSchedule(address account) internal view returns (bool) {
+	function _hasVestingSchedule(address account) internal view returns (bool ok) {
 		return _vestingSchedules[account].isValid;
 	}
+
+	/**
+     * @dev returns all information about the vesting schedule directly associated with the given
+     * account. This can be used to double check that a uniform grantor has been set up with a
+     * correct vesting schedule. Also, recipients of standard (non-uniform) grants can use this.
+     * This method is only callable by the account holder or a grantor, so this is mainly intended
+     * for administrative use.
+     *
+     * Holders of uniform grants must use vestingAsOf() to view their vesting schedule, as it is
+     * stored in the grantor account.
+	 *
+	 * @param grantHolder = The address to do this for.
+	 *   the special value 0 to indicate today.
+	 * @return = A tuple with the following values:
+	 *   cliffDuration = duration of the cliff.
+	 *   vestDuration = grant duration in days.
+	 *   vestIntervalDays = number of days between vesting periods.
+	 */
+	function getIntrinsicVestingSchedule(address grantHolder)
+	public
+	view
+	onlyGrantorOrSelf(grantHolder)
+	returns (
+		uint32 cliffDuration,
+		uint32 vestDuration,
+		uint32 vestIntervalDays
+	)
+	{
+		return (
+		_vestingSchedules[grantHolder].cliffDuration,
+		_vestingSchedules[grantHolder].duration,
+		_vestingSchedules[grantHolder].interval
+		);
+	}
+
+
+	// =====================================================================================================================
+	// === Token grants (general-purpose)
+	// === Methods to be used for administratively creating one-off token grants with vesting schedules.
+	// =====================================================================================================================
 
 	/**
 	 * @dev Immediately grants tokens to an account, referencing a vesting schedule which may be
@@ -127,21 +170,30 @@ contract ERC20Vestable is ERC20, Registration, GrantorRole, IERC20Vestable {
 	 *   funds will be withdrawn.
 	 */
 	function _grantVestingTokens(
-		address beneficiary, uint256 totalAmount, uint256 vestingAmount, uint32 startDay, address vestingLocation, address grantor) internal returns (bool) {
+		address beneficiary,
+		uint256 totalAmount,
+		uint256 vestingAmount,
+		uint32 startDay,
+		address vestingLocation,
+		address grantor
+	)
+	internal returns (bool ok)
+	{
 		// Make sure no prior grant is in effect.
-		require(!_tokenGrants[beneficiary].isActive, "An active grant already exists for this account.");
+		require(!_tokenGrants[beneficiary].isActive, "grant already exists");
 
-		// Vesting amount cannot exceed total amount granted.
-		require(vestingAmount <= totalAmount, "vestingAmount must not exceed totalAmount.");
-		// Require startDay to be within reasonable range.
-		require(startDay >= JAN_1_2000_DAYS && startDay < JAN_1_3000_DAYS, "startDay is not valid.");
 		// Check for valid vestingAmount
-		require(vestingAmount <= totalAmount && vestingAmount > 0, "vestingAmount cannot be zero or more than totalAmount.");
+		require(
+			vestingAmount <= totalAmount && vestingAmount > 0
+		 && startDay >= JAN_1_2000_DAYS && startDay < JAN_1_3000_DAYS,
+		"invalid vesting params");
+
 		// Make sure the vesting schedule we are about to use is valid.
-		require(_hasVestingSchedule(vestingLocation), "The referenced vesting schedule does not exist.");
+		require(_hasVestingSchedule(vestingLocation), "no such vesting schedule");
 
 		// Transfer the total number of tokens from grantor into the account's holdings.
-		_transfer(msg.sender, beneficiary, totalAmount);    /* Emits a Transfer event. */
+		_transfer(msg.sender, beneficiary, totalAmount);
+		/* Emits a Transfer event. */
 
 		// Create and populate a token grant, referencing vesting schedule.
 		_tokenGrants[beneficiary] = tokenGrant(
@@ -149,10 +201,9 @@ contract ERC20Vestable is ERC20, Registration, GrantorRole, IERC20Vestable {
 			false/*wasRevoked*/,
 			startDay,
 			vestingAmount,
-		// The wallet address where the vesting schedule is kept.
-			vestingLocation,
-		// The account that performed the grant (where revoked funds would be sent)
-			grantor);
+			vestingLocation, /* The wallet address where the vesting schedule is kept. */
+			grantor             /* The account that performed the grant (where revoked funds would be sent) */
+		);
 
 		// Emit the event and return success.
 		emit VestingTokensGranted(beneficiary, vestingAmount, startDay, vestingLocation, grantor);
@@ -177,11 +228,17 @@ contract ERC20Vestable is ERC20, Registration, GrantorRole, IERC20Vestable {
 	 *   be revoked (i.e. tokens were purchased).
 	 */
 	function grantVestingTokens(
-		address beneficiary, uint256 totalAmount, uint256 vestingAmount,
-		uint32 startDay, uint32 duration, uint32 cliffDuration, uint32 interval,
-		bool isRevocable) public onlyGrantor returns (bool) {
+		address beneficiary,
+		uint256 totalAmount,
+		uint256 vestingAmount,
+		uint32 startDay,
+		uint32 duration,
+		uint32 cliffDuration,
+		uint32 interval,
+		bool isRevocable
+	) public onlyGrantor returns (bool ok) {
 		// Make sure no prior vesting schedule has been set.
-		require(!_tokenGrants[beneficiary].isActive, "An active grant already exists for this account.");
+		require(!_tokenGrants[beneficiary].isActive, "grant already exists");
 
 		// The vesting schedule is unique to this wallet and so will be stored here,
 		_setVestingSchedule(beneficiary, cliffDuration, duration, interval, isRevocable);
@@ -198,7 +255,7 @@ contract ERC20Vestable is ERC20, Registration, GrantorRole, IERC20Vestable {
 	function safeGrantVestingTokens(
 		address beneficiary, uint256 totalAmount, uint256 vestingAmount,
 		uint32 startDay, uint32 duration, uint32 cliffDuration, uint32 interval,
-		bool isRevocable) public onlyGrantor onlySafeAccount(beneficiary) returns (bool) {
+		bool isRevocable) public onlyGrantor onlySafeAccount(beneficiary) returns (bool ok) {
 
 		return grantVestingTokens(
 			beneficiary, totalAmount, vestingAmount,
@@ -214,11 +271,11 @@ contract ERC20Vestable is ERC20, Registration, GrantorRole, IERC20Vestable {
 	/**
 	 * @dev returns the day number of the current day, in days since the UNIX epoch.
 	 */
-	function today() public view returns (uint32) {
+	function today() public view returns (uint32 dayNumber) {
 		return uint32(block.timestamp / SECONDS_PER_DAY);
 	}
 
-	function _effectiveDay(uint32 onDayOrToday) internal view returns (uint32) {
+	function _effectiveDay(uint32 onDayOrToday) internal view returns (uint32 dayNumber) {
 		return onDayOrToday == 0 ? today() : onDayOrToday;
 	}
 
@@ -231,12 +288,12 @@ contract ERC20Vestable is ERC20, Registration, GrantorRole, IERC20Vestable {
 	 * @param onDayOrToday = The day to check for, in days since the UNIX epoch. Can pass
 	 *   the special value 0 to indicate today.
 	 */
-	function _getNotVestedAmount(address grantHolder, uint32 onDayOrToday) internal view returns (uint256) {
+	function _getNotVestedAmount(address grantHolder, uint32 onDayOrToday) internal view returns (uint256 amountNotVested) {
 		tokenGrant storage grant = _tokenGrants[grantHolder];
 		vestingSchedule storage vesting = _vestingSchedules[grant.vestingLocation];
 		uint32 onDay = _effectiveDay(onDayOrToday);
 
-        // If there's no schedule, or before the vesting cliff, then the full amount is not vested.
+		// If there's no schedule, or before the vesting cliff, then the full amount is not vested.
 		if (!grant.isActive || onDay < grant.startDay + vesting.cliffDuration)
 		{
 			// None are vested (all are not vested)
@@ -276,7 +333,7 @@ contract ERC20Vestable is ERC20, Registration, GrantorRole, IERC20Vestable {
 	 * @param grantHolder = The account to check.
 	 * @param onDay = The day to check for, in days since the UNIX epoch.
 	 */
-	function _getAvailableAmount(address grantHolder, uint32 onDay) internal view returns (uint256) {
+	function _getAvailableAmount(address grantHolder, uint32 onDay) internal view returns (uint256 amountAvailable) {
 		uint256 totalTokens = balanceOf(grantHolder);
 		uint256 vested = totalTokens.sub(_getNotVestedAmount(grantHolder, onDay));
 		return vested;
@@ -291,9 +348,9 @@ contract ERC20Vestable is ERC20, Registration, GrantorRole, IERC20Vestable {
 	 * @param onDayOrToday = The day to check for, in days since the UNIX epoch. Can pass
 	 *   the special value 0 to indicate today.
 	 * @return = A tuple with the following values:
-	 *   vestedAmount = the amount out of vestingAmount that is vested
-	 *   notVestedAmount = the amount that is vested (equal to vestingAmount - vestedAmount)
-	 *   grantAmount = the amount of tokens subject to vesting.
+	 *   amountVested = the amount out of vestingAmount that is vested
+	 *   amountNotVested = the amount that is vested (equal to vestingAmount - vestedAmount)
+	 *   amountOfGrant = the amount of tokens subject to vesting.
 	 *   vestStartDay = starting day of the grant (in days since the UNIX epoch).
 	 *   cliffDuration = duration of the cliff.
 	 *   vestDuration = grant duration in days.
@@ -301,7 +358,25 @@ contract ERC20Vestable is ERC20, Registration, GrantorRole, IERC20Vestable {
 	 *   isActive = true if the vesting schedule is currently active.
 	 *   wasRevoked = true if the vesting schedule was revoked.
 	 */
-	function vestingForAccountAsOf(address grantHolder, uint32 onDayOrToday) public view onlyGrantorOrSelf(grantHolder) returns (uint256, uint256, uint256, uint32, uint32, uint32, uint32, bool, bool) {
+	function vestingForAccountAsOf(
+		address grantHolder,
+		uint32 onDayOrToday
+	)
+	public
+	view
+	onlyGrantorOrSelf(grantHolder)
+	returns (
+		uint256 amountVested,
+		uint256 amountNotVested,
+		uint256 amountOfGrant,
+		uint32 vestStartDay,
+		uint32 cliffDuration,
+		uint32 vestDuration,
+		uint32 vestIntervalDays,
+		bool isActive,
+		bool wasRevoked
+	)
+	{
 		tokenGrant storage grant = _tokenGrants[grantHolder];
 		vestingSchedule storage vesting = _vestingSchedules[grant.vestingLocation];
 		uint256 notVestedAmount = _getNotVestedAmount(grantHolder, onDayOrToday);
@@ -327,11 +402,28 @@ contract ERC20Vestable is ERC20, Registration, GrantorRole, IERC20Vestable {
 	 * @param onDayOrToday = The day to check for, in days since the UNIX epoch. Can pass
 	 *   the special value 0 to indicate today.
 	 * @return = A tuple with the following values:
-	 *   vestedAmount = the amount out of vestingAmount that is vested
-	 *   notVestedAmount = the amount that is vested (equal to vestingAmount - vestedAmount)
-	 *   vestingAmount = the amount of tokens subject to vesting.
+	 *   amountVested = the amount out of vestingAmount that is vested
+	 *   amountNotVested = the amount that is vested (equal to vestingAmount - vestedAmount)
+	 *   amountOfGrant = the amount of tokens subject to vesting.
+	 *   vestStartDay = starting day of the grant (in days since the UNIX epoch).
+	 *   cliffDuration = duration of the cliff.
+	 *   vestDuration = grant duration in days.
+	 *   vestIntervalDays = number of days between vesting periods.
+	 *   isActive = true if the vesting schedule is currently active.
+	 *   wasRevoked = true if the vesting schedule was revoked.
 	 */
-	function vestingAsOf(uint32 onDayOrToday) public view returns (uint256, uint256, uint256, uint32, uint32, uint32, uint32, bool, bool) {
+	function vestingAsOf(uint32 onDayOrToday) public view returns (
+		uint256 amountVested,
+		uint256 amountNotVested,
+		uint256 amountOfGrant,
+		uint32 vestStartDay,
+		uint32 cliffDuration,
+		uint32 vestDuration,
+		uint32 vestIntervalDays,
+		bool isActive,
+		bool wasRevoked
+	)
+	{
 		return vestingForAccountAsOf(msg.sender, onDayOrToday);
 	}
 
@@ -343,7 +435,7 @@ contract ERC20Vestable is ERC20, Registration, GrantorRole, IERC20Vestable {
 	 * @param amount = The required amount of vested funds.
 	 * @param onDay = The day to check for, in days since the UNIX epoch.
 	 */
-	function _fundsAreAvailableOn(address owner, uint256 amount, uint32 onDay) internal view returns (bool) {
+	function _fundsAreAvailableOn(address owner, uint256 amount, uint32 onDay) internal view returns (bool ok) {
 		return (amount <= _getAvailableAmount(owner, onDay));
 	}
 
@@ -353,10 +445,10 @@ contract ERC20Vestable is ERC20, Registration, GrantorRole, IERC20Vestable {
 	 * @param owner = The account to check.
 	 * @param amount = The required amount of vested funds.
 	 */
-	modifier onlyIfAvailableNow(address owner, uint256 amount) {
+	modifier onlyIfFundsAvailableNow(address owner, uint256 amount) {
 		// Distinguish insufficient overall balance from insufficient vested funds balance in failure msg.
 		require(_fundsAreAvailableOn(owner, amount, today()),
-			balanceOf(owner) < amount ? "Insufficient funds." : "Insufficient vested funds.");
+			balanceOf(owner) < amount ? "insufficient funds" : "insufficient vested funds");
 		_;
 	}
 
@@ -374,33 +466,36 @@ contract ERC20Vestable is ERC20, Registration, GrantorRole, IERC20Vestable {
 	 * @param onDay = The date upon which the vesting schedule will be effectively terminated,
 	 *   in days since the UNIX epoch (start of day).
 	 */
-	function revokeGrant(address grantHolder, uint32 onDay) public onlyGrantor returns (bool) {
+	function revokeGrant(address grantHolder, uint32 onDay) public onlyGrantor returns (bool ok) {
 		tokenGrant storage grant = _tokenGrants[grantHolder];
 		vestingSchedule storage vesting = _vestingSchedules[grant.vestingLocation];
 		uint256 notVestedAmount;
 
 		// Make sure grantor can only revoke from own pool.
-		require(msg.sender == owner() || msg.sender == grant.grantor, "Only owner or original grantor may revoke this grant.");
+		require(msg.sender == owner() || msg.sender == grant.grantor, "not allowed");
 		// Make sure a vesting schedule has previously been set.
-		require(grant.isActive, "No active vesting schedule exists for this account.");
+		require(grant.isActive, "no active vesting schedule");
 		// Make sure it's revocable.
-		require(vesting.isRevocable, "The vesting schedule for this account is irrevocable.");
+		require(vesting.isRevocable, "irrevocable");
 		// Fail on likely erroneous input.
-		require(onDay <= grant.startDay + vesting.duration, "This would have no effect so no action was taken.");
+		require(onDay <= grant.startDay + vesting.duration, "no effect");
 		// Don"t let grantor revoke anf portion of vested amount.
-		require(onDay >= today(), "Cannot revoke already vested portion of grant.");
+		require(onDay >= today(), "cannot revoke vested holdings");
 
 		notVestedAmount = _getNotVestedAmount(grantHolder, onDay);
 
 		// Use ERC20 _approve() to forcibly approve grantor to take back not-vested tokens from grantHolder.
-		_approve(grantHolder, grant.grantor, notVestedAmount);      /* Emits an Approval Event. */
-		transferFrom(grantHolder, grant.grantor, notVestedAmount);  /* Emits a Transfer and an Approval Event. */
+		_approve(grantHolder, grant.grantor, notVestedAmount);
+		/* Emits an Approval Event. */
+		transferFrom(grantHolder, grant.grantor, notVestedAmount);
+		/* Emits a Transfer and an Approval Event. */
 
 		// Kill the grant by updating wasRevoked and isActive.
 		_tokenGrants[grantHolder].wasRevoked = true;
 		_tokenGrants[grantHolder].isActive = false;
 
-		emit GrantRevoked(grantHolder, onDay);  /* Emits the GrantRevoked event. */
+		emit GrantRevoked(grantHolder, onDay);
+		/* Emits the GrantRevoked event. */
 		return true;
 	}
 
@@ -414,14 +509,14 @@ contract ERC20Vestable is ERC20, Registration, GrantorRole, IERC20Vestable {
 	 * prevent spending held but non-vested tokens. Note that transferFrom() does NOT have this
 	 * additional check because approved funds come from an already set-aside allowance, not from the wallet.
 	 */
-	function transfer(address to, uint256 value) public onlyIfAvailableNow(msg.sender, value) returns (bool) {
+	function transfer(address to, uint256 value) public onlyIfFundsAvailableNow(msg.sender, value) returns (bool ok) {
 		return super.transfer(to, value);
 	}
 
 	/**
 	 * @dev Additional available funds check to prevent spending held but non-vested tokens.
 	 */
-	function approve(address spender, uint256 value) public onlyIfAvailableNow(msg.sender, value) returns (bool) {
+	function approve(address spender, uint256 value) public onlyIfFundsAvailableNow(msg.sender, value) returns (bool ok) {
 		return super.approve(spender, value);
 	}
 }

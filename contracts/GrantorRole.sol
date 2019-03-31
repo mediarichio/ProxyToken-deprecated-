@@ -88,7 +88,7 @@ contract GrantorRole is Ownable {
 	 * token grant administration becoming impossible. We override this to always disallow it.
 	 */
 	function renounceOwnership() public onlyOwner {
-		require(false, "renounceOwnership() disallowed!");
+		require(false, "forbidden");
 	}
 
 	/**

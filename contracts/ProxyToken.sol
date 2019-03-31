@@ -12,7 +12,7 @@ import "./UniformTokenGrantor.sol";
  * functions.
  */
 contract ProxyToken is PasswordProtected, Identity, ERC20, ERC20Pausable, ERC20Burnable, ERC20Detailed, UniformTokenGrantor {
-	uint32 public constant VERSION = 3;
+	uint32 public constant VERSION = 4;
 
 	uint8 private constant DECIMALS = 18;
 	uint256 private constant TOKEN_WEI = 10 ** uint256(DECIMALS);
@@ -52,7 +52,7 @@ contract ProxyToken is PasswordProtected, Identity, ERC20, ERC20Pausable, ERC20B
 	 * @dev Allow pauser to kill the contract (which must already be paused), with enough restrictions
 	 * in place to ensure this could not happen by accident very easily. ETH is returned to owner wallet.
 	 */
-	function kill(string memory password) whenPaused onlyPauser onlyCorrectPassword(password) public returns (bool) {
+	function kill(string memory password) whenPaused onlyPauser onlyCorrectPassword(password) public returns (bool itsDeadJim) {
 		require(isPauser(msg.sender), "onlyPauser");
 		address payable payableOwner = address(uint160(owner()));
 		selfdestruct(payableOwner);

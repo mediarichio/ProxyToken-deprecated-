@@ -8,7 +8,7 @@ const colors = require('colors');
 const util = require('util');
 
 
-// Set true temporarily to disable all tests except the one under development.
+// Set false temporarily to disable all tests except the one under development, and to enable compile/deploy log messages.
 const RUN_ALL_TESTS = true;     // This should be always checked in set to true!
 
 
@@ -1016,7 +1016,7 @@ describe('ProxyToken', () => {
                 await expectFail(testRevokeVestingSchedule(owner, account1,
                     [tokensToWei(1001), tokensToWei(1000), TODAY_DAYS - 400],
                     [360, 90, 30, true],
-                    TODAY_DAYS), 'This would have no effect so no action was taken.').catch(catcher);
+                    TODAY_DAYS), 'no effect').catch(catcher);
             }).catch(catcher);
         }).timeout(5000);   // Takes a while to run because of the granting and revoking.
 
@@ -1024,18 +1024,21 @@ describe('ProxyToken', () => {
         it('27. Test onlyGrantorOrSelf() modifier of vestingForAccountAsOf()', async () => {
             if (!ProxyToken) return;
 
+            const numReturnValues = 9;
+            const resultSize = numReturnValues*2;   /* Because indexed and named value is returned for each */
+
             // It should work that any account can call vestingAsOf(), which returns self-vesting
             result.set(await ProxyToken.methods.vestingAsOf(Math.floor(TODAY_DAYS)).call({from: owner, gas: VESTASOFGAS}));
-            checkAreEqual(Object.size(result.value()), 9, 'Expected result to be the result tuple');
+            checkAreEqual(Object.size(result.value()), resultSize, 'Expected result to be the result tuple');
             result.set(await ProxyToken.methods.vestingAsOf(Math.floor(TODAY_DAYS)).call({from: account1, gas: VESTASOFGAS}));
-            checkAreEqual(Object.size(result.value()), 9, 'Expected result to be the result tuple');
+            checkAreEqual(Object.size(result.value()), resultSize, 'Expected result to be the result tuple');
 
             // It should work that owner can call vestingForAccountAsOf() for account1 (because owner is grantor)
             result.set(await ProxyToken.methods.vestingForAccountAsOf(account1, Math.floor(TODAY_DAYS)).call({from: owner}));
-            checkAreEqual(Object.size(result.value()), 9, 'Expected result to be the result tuple');
+            checkAreEqual(Object.size(result.value()), resultSize, 'Expected result to be the result tuple');
             // It should also work that account1 can call vestingForAccountAsOf() for self
             result.set(await ProxyToken.methods.vestingForAccountAsOf(account1, Math.floor(TODAY_DAYS)).call({from: account1}));
-            checkAreEqual(Object.size(result.value()), 9, 'Expected result to be the result tuple');
+            checkAreEqual(Object.size(result.value()), resultSize, 'Expected result to be the result tuple');
 
             // However, account2 should be prevented from looking at account1.
             result.set(await expectFail(ProxyToken.methods.vestingForAccountAsOf(account1, Math.floor(TODAY_DAYS)).call({from: account2})).catch(catcher));
@@ -1295,7 +1298,7 @@ describe('ProxyToken', () => {
                 result.checkDidFail('Non-owner should not be able to kill');
 
                 result.set(await expectFail(ProxyToken.methods.kill(wrongPassword).send({from: pauser}),
-                    'Incorrect password!').catch(catcher));
+                    'access denied').catch(catcher));
                 result.checkDidFail('Owner should not be able to kill when not paused');
 
                 // This only succeeds if not killed.
@@ -1374,7 +1377,7 @@ describe('ProxyToken', () => {
                 result.set(await ProxyToken.methods.addGrantor(grantor, isUniformGrantor).send({from: owner}));
                 result.checkTransactionOk();
                 result.set(await expectFail(ProxyToken.methods.setRestrictions(grantor, MINSTARTDAY, MAXSTARTDAY, EXPIRATIONDAY).send({from: owner}),
-                    'The target account has not self-registered.').catch(catcher));
+                    'account not registered').catch(catcher));
                 result.checkDidFail();
             }).catch(catcher);
 
@@ -1387,19 +1390,19 @@ describe('ProxyToken', () => {
 
             await subtest('40c. check that owner can\'t set vesting schedule of unregistered grantor.', async () => {
                 result.set(await expectFail(ProxyToken.methods.setGrantorVestingSchedule(grantor, ...vestingSchedule).send({from: owner}),
-                    'The target account has not self-registered.').catch(catcher));
+                    'account not registered').catch(catcher));
                 result.checkDidFail();
             }).catch(catcher);
 
             await subtest('40d. check that owner can\'t set vesting schedule of non-grantor.', async () => {
                 result.set(await expectFail(ProxyToken.methods.setGrantorVestingSchedule(beneficiary, ...vestingSchedule).send({from: owner}),
-                    'The target account has not self-registered.').catch(catcher));
+                    'account not registered').catch(catcher));
                 result.checkDidFail();
             }).catch(catcher);
 
             await subtest('40e. check that grantor can\'t grant tokens without restrictions set up.', async () => {
                 result.set(await expectFail(ProxyToken.methods.grantUniformVestingTokens(beneficiary, ...vestingParams).send({from: owner}),
-                    'Must be a uniform grantor with a vesting schedule to do this.').catch(catcher));
+                    'grantor account not ready').catch(catcher));
                 result.checkDidFail();
 
             });
@@ -1430,11 +1433,11 @@ describe('ProxyToken', () => {
 
             await subtest('40i. check that vesting schedule cannot be changed', async () => {
                 result.set(await expectFail(ProxyToken.methods.setGrantorVestingSchedule(grantor, ...vestingSchedule).send({from: owner}),
-                    'Existing shared, uniform granting schedule cannot be changed.').catch(catcher));
+                    'schedule already exists').catch(catcher));
                 result.checkDidFail();
 
                 result.set(await expectFail(ProxyToken.methods.setGrantorVestingSchedule(grantor, ...vestingSchedule2).send({from: owner}),
-                    'Existing shared, uniform granting schedule cannot be changed.').catch(catcher));
+                    'schedule already exists').catch(catcher));
                 result.checkDidFail();
             }).catch(catcher);
 
@@ -1445,10 +1448,10 @@ describe('ProxyToken', () => {
 
             await subtest('40j. check that date restrictions are enforced when granting.', async () => {
                 result.set(await expectFail(ProxyToken.methods.grantUniformVestingTokens(beneficiary, ...vestingParams_restricted1).send({from: grantor, gas: UNIFORMGRANTGAS}),
-                    'startDay is outside of permitted range.').catch(catcher));
+                    'startDay too early').catch(catcher));
                 result.checkDidFail();
                 result.set(await expectFail(ProxyToken.methods.grantUniformVestingTokens(beneficiary, ...vestingParams_restricted2).send({from: grantor, gas: UNIFORMGRANTGAS}),
-                    'startDay is outside of permitted range.').catch(catcher));
+                    'startDay too early').catch(catcher));
                 result.checkDidFail();
             }).catch(catcher);
 
@@ -1461,7 +1464,7 @@ describe('ProxyToken', () => {
 
             await subtest('40m. check that under the same conditions, safe grant is disallowed.', async () => {
                 result.set(await expectFail(ProxyToken.methods.safeGrantUniformVestingTokens(beneficiary2, ...vestingParams).send({from: grantor, gas: UNIFORMGRANTGAS}),
-                    'The target account has not self-registered.').catch(catcher));
+                    'account not registered').catch(catcher));
                 result.checkDidFail();
             }).catch(catcher);
 
