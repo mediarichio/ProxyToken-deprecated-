@@ -1356,6 +1356,7 @@ describe('ProxyToken', () => {
             let beneficiary = account2;
             let beneficiary2 = account3;
             let vestingSchedule = [12,3,1, true];
+            let vestingSchedule2 = [24,6,1, true];
 
             await subtest('40a. check that owner can\'t set restrictions on non-grantor.', async () => {
                 result.set(await expectFail(ProxyToken.methods.setRestrictions(grantor, MINSTARTDAY, MAXSTARTDAY, EXPIRATIONDAY).send({from: owner})).catch(catcher));
@@ -1402,6 +1403,7 @@ describe('ProxyToken', () => {
             }).catch(catcher);
 
             await subtest('40h. check that owner CAN set restrictions and vesting schedule on registered grantor.', async () => {
+                // These 3 steps set up a working uniform grantor.
                 result.set(await ProxyToken.methods.registerAccount().send({from: grantor}));
                 result.checkTransactionOk();
                 result.set(await ProxyToken.methods.setRestrictions(grantor, MINSTARTDAY, MAXSTARTDAY, EXPIRATIONDAY).send({from: owner}));
@@ -1410,8 +1412,14 @@ describe('ProxyToken', () => {
                 result.checkTransactionOk();
             }).catch(catcher);
 
-            await subtest('40i. check that vesting schedule cannot be set again.', async () => {
+            // From this point on, grantor is a valid, working uniform grantor.
+
+            await subtest('40i. check that vesting schedule cannot be changed', async () => {
                 result.set(await expectFail(ProxyToken.methods.setGrantorVestingSchedule(grantor, ...vestingSchedule).send({from: owner}),
+                    'Existing shared, uniform granting schedule cannot be changed.').catch(catcher));
+                result.checkDidFail();
+
+                result.set(await expectFail(ProxyToken.methods.setGrantorVestingSchedule(grantor, ...vestingSchedule2).send({from: owner}),
                     'Existing shared, uniform granting schedule cannot be changed.').catch(catcher));
                 result.checkDidFail();
             }).catch(catcher);
