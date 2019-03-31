@@ -11,9 +11,6 @@ const util = require('util');
 // Set true temporarily to disable all tests except the one under development.
 const RUN_ALL_TESTS = true;     // This should be always checked in set to true!
 
-// If the compile/deploy is failing, set this true to figure out why (noisy)
-const SEE_DEPLOY_COMPILE_MSGS = false;
-
 
 // =====================================================================================================================
 // === This executes the entire test suite.
@@ -36,7 +33,10 @@ build(contractFullPath, console);
 const defaultPassword = fs.readFileSync(path.resolve('./', 'kill-password.txt'), 'utf8');
 const constructorArgs = [defaultPassword];
 
-const deployLogger = SEE_DEPLOY_COMPILE_MSGS ? console : nullLogger;
+// If the compile/deploy is failing, set this true to figure out why (but is noisy)
+const logDeployAndCompileErrors = !RUN_ALL_TESTS;
+
+const deployLogger = logDeployAndCompileErrors ? console : nullLogger;
 beforeEach(async () => {
     // Deploy the source contracts fresh before each test (without rebuild, no deploy output logging).
     const deployment = await deploy(contractFullPath, false, constructorArgs, deployLogger).catch(deployLogger);
@@ -92,7 +92,7 @@ function whichAccountIs(test) {
 // =====================================================================================================================
 
 if (!RUN_ALL_TESTS)
-    console.log(colors.blue('Not all tests will be run! Please set RUN_ALL_TESTS = true first to run every test.'));
+    console.log(colors.blue('Not all tests were be run! Please set RUN_ALL_TESTS = true first to run every test.'));
 
 describe('ProxyToken', () => {
     const ONE_MILLION = 1000000;
@@ -1363,12 +1363,26 @@ describe('ProxyToken', () => {
                 result.checkDidFail();
             }).catch(catcher);
 
+            await subtest('40a1. check that grantor is not yet an exchange grantor.', async () => {
+                result.set(await ProxyToken.methods.isGrantor(grantor).call({from: account9}));
+                result.checkIsEqual(false);
+                result.set(await ProxyToken.methods.isUniformGrantor(grantor).call({from: account9}));
+                result.checkIsEqual(false);
+            }).catch(catcher);
+
             await subtest('40b. check that owner can\'t set restrictions on unregistered grantor.', async () => {
                 result.set(await ProxyToken.methods.addGrantor(grantor, isUniformGrantor).send({from: owner}));
                 result.checkTransactionOk();
                 result.set(await expectFail(ProxyToken.methods.setRestrictions(grantor, MINSTARTDAY, MAXSTARTDAY, EXPIRATIONDAY).send({from: owner}),
                     'The target account has not self-registered.').catch(catcher));
                 result.checkDidFail();
+            }).catch(catcher);
+
+            await subtest('40b1. check that grantor is now a exchange grantor.', async () => {
+                result.set(await ProxyToken.methods.isGrantor(grantor).call({from: account9}));
+                result.checkIsEqual(true);
+                result.set(await ProxyToken.methods.isUniformGrantor(grantor).call({from: account9}));
+                result.checkIsEqual(true);
             }).catch(catcher);
 
             await subtest('40c. check that owner can\'t set vesting schedule of unregistered grantor.', async () => {
@@ -1512,7 +1526,29 @@ describe('ProxyToken', () => {
             }).catch(catcher);
         });
 
-            // ================================================================================
+    if (runThisTest())
+        it('42. accountIsRegistered()', async () => {
+            if (!ProxyToken) return;
+
+            // Owner should initially be pre-registered (via constructor).
+            result.set(await ProxyToken.methods.accountIsRegistered(owner).call({from: account9}));
+            result.checkIsEqual(true);
+
+            // Account1 should initially not be registered.
+            result.set(await ProxyToken.methods.accountIsRegistered(account1).call({from: account9}));
+            result.checkIsEqual(false);
+
+            // Register account1.
+            result.set(await ProxyToken.methods.registerAccount().send({from: account1}));
+            result.checkTransactionOk();
+
+            // Account1 should initially now be registered.
+            result.set(await ProxyToken.methods.accountIsRegistered(account1).call({from: account9}));
+            result.checkIsEqual(true);
+
+        });
+
+    // ================================================================================
     // === Last: Summary
     // ================================================================================
     it('Display build results summary', async () => {

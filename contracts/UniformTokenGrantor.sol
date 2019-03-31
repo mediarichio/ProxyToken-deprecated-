@@ -53,7 +53,7 @@ contract UniformTokenGrantor is ERC20Vestable {
 	)
 		public
 		onlyOwner
-		onlyExistingAccount(grantor)
+		onlySafeAccount(grantor)
 		returns (bool)
 	{
 		require(isUniformGrantor(grantor), "Only unrestricted grantor wallet may receive grant restrictions.");
@@ -94,7 +94,7 @@ contract UniformTokenGrantor is ERC20Vestable {
 	)
 		public
 		onlyOwner
-		onlyExistingAccount(grantor)
+		onlySafeAccount(grantor)
 		returns (bool)
 	{
 		// Only allow doing this to restricted grantor role account.
@@ -176,7 +176,7 @@ contract UniformTokenGrantor is ERC20Vestable {
 		public
 		onlyUniformGrantorWithSchedule(msg.sender)
 		whenGrantorRestrictionsMet(startDay)
-		onlyExistingAccount(beneficiary)
+		onlySafeAccount(beneficiary)
 		returns (bool)
 	{
 		// Issue grantor tokens to the beneficiary, using beneficiary's own vesting schedule.

@@ -1,7 +1,7 @@
 pragma solidity ^0.5.2;
 
 import "../../openzeppelin-solidity/contracts/token/ERC20/ERC20Pausable.sol";
-import "./ERC20SafeMethods.sol";
+import "./Registration.sol";
 import "./GrantorRole.sol";
 import "./IERC20Vestable.sol";
 
@@ -25,7 +25,7 @@ import "./IERC20Vestable.sol";
  *   - Revocable grants, intended for use in cases when vesting tokens have been gifted to the holder,
  *     such as with employee grants that are given as compensation.
  */
-contract ERC20Vestable is ERC20, ERC20SafeMethods, GrantorRole, IERC20Vestable {
+contract ERC20Vestable is ERC20, Registration, GrantorRole, IERC20Vestable {
 	using SafeMath for uint256;
 
 	// Date-related constants for sanity-checking dates to reject obvious erroneous inputs
@@ -198,7 +198,7 @@ contract ERC20Vestable is ERC20, ERC20SafeMethods, GrantorRole, IERC20Vestable {
 	function safeGrantVestingTokens(
 		address beneficiary, uint256 totalAmount, uint256 vestingAmount,
 		uint32 startDay, uint32 duration, uint32 cliffDuration, uint32 interval,
-		bool isRevocable) public onlyGrantor onlyExistingAccount(beneficiary) returns (bool) {
+		bool isRevocable) public onlyGrantor onlySafeAccount(beneficiary) returns (bool) {
 
 		return grantVestingTokens(
 			beneficiary, totalAmount, vestingAmount,

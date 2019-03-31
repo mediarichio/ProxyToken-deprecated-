@@ -68,7 +68,7 @@ contract GrantorRole is Ownable {
 		emit GrantorRemoved(account);
 	}
 
-	function isUniformGrantor(address account) internal view returns (bool) {
+	function isUniformGrantor(address account) public view returns (bool) {
 		return isGrantor(account) && _isUniformGrantor[account];
 	}
 

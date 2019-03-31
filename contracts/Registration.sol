@@ -3,7 +3,7 @@ pragma solidity ^0.5.2;
 import "../../openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "../../openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 
-contract ERC20SafeMethods is ERC20, Ownable {
+contract Registration is ERC20, Ownable {
 
 	mapping(address => bool) private _isRegistered;
 
@@ -25,11 +25,14 @@ contract ERC20SafeMethods is ERC20, Ownable {
 		return true;
 	}
 
+	function accountIsRegistered(address account) public view returns (bool) {
+		return _isRegistered[account];
+	}
 	function _accountExists(address account) internal view returns (bool) {
 		return account == msg.sender || _isRegistered[account];
 	}
 
-	modifier onlyExistingAccount(address account) {
+	modifier onlySafeAccount(address account) {
 		require(_accountExists(account), "The target account has not self-registered.");
 		_;
 	}
@@ -39,17 +42,17 @@ contract ERC20SafeMethods is ERC20, Ownable {
 	// === Safe ERC20 methods
 	// =====================================================================================================================
 
-	function safeTransfer(address to, uint256 value) public onlyExistingAccount(to) returns (bool) {
+	function safeTransfer(address to, uint256 value) public onlySafeAccount(to) returns (bool) {
 		transfer(to, value);
 		return true;
 	}
 
-	function safeApprove(address spender, uint256 value) public onlyExistingAccount(spender) returns (bool) {
+	function safeApprove(address spender, uint256 value) public onlySafeAccount(spender) returns (bool) {
 		approve(spender, value);
 		return true;
 	}
 
-	function safeTransferFrom(address from, address to, uint256 value) public onlyExistingAccount(to) returns (bool) {
+	function safeTransferFrom(address from, address to, uint256 value) public onlySafeAccount(to) returns (bool) {
 		transferFrom(from, to, value);
 		return true;
 	}
@@ -63,7 +66,7 @@ contract ERC20SafeMethods is ERC20, Ownable {
 	 * @dev Allows the current owner to transfer control of the contract to a newOwner.
 	 * @param newOwner The address to transfer ownership to.
 	 */
-	function transferOwnership(address newOwner) public onlyExistingAccount(newOwner) onlyOwner {
+	function transferOwnership(address newOwner) public onlySafeAccount(newOwner) onlyOwner {
 		super.transferOwnership(newOwner);
 	}
 }
