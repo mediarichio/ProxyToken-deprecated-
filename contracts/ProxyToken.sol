@@ -1,4 +1,4 @@
-pragma solidity ^0.5.2;
+pragma solidity ^0.5.7;
 
 import "./PasswordProtected.sol";
 import "./Identity.sol";
@@ -49,10 +49,18 @@ contract ProxyToken is PasswordProtected, Identity, ERC20, ERC20Pausable, ERC20B
 	}
 
 	/**
+     * Allow owner to change password.
+	 */
+	function changePassword(string memory oldPassword, string memory newPassword) onlyOwner public returns (bool ok) {
+		_changePassword(oldPassword, newPassword);
+		return true;
+	}
+
+	/**
 	 * @dev Allow pauser to kill the contract (which must already be paused), with enough restrictions
 	 * in place to ensure this could not happen by accident very easily. ETH is returned to owner wallet.
 	 */
-	function kill(string memory password) whenPaused onlyPauser onlyCorrectPassword(password) public returns (bool itsDeadJim) {
+	function kill(string memory password) whenPaused onlyPauser onlyValidPassword(password) public returns (bool itsDeadJim) {
 		require(isPauser(msg.sender), "onlyPauser");
 		address payable payableOwner = address(uint160(owner()));
 		selfdestruct(payableOwner);

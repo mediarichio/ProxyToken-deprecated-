@@ -1,15 +1,19 @@
-pragma solidity ^0.5.2;
+pragma solidity ^0.5.7;
 
 /**
- * Implementation of a contract to add password-protection support to API calls of child contracts.
+ * @dev Implements a contract to add password-protection support to API calls of child contracts.
  * This is secure through storage of only the keccak256 hash of the password, which is irreversible.
- * Critically, no methods are public. The only internally exposed elements are the constructor,
- * which establishes the original password, and the modifier isCorrectPassword, which can be attached
- * to methods which accept a password argument and require a valid password to perform the function.
+ * Critically, all sensitive methods have private visibility.
+ *
+ * As implemented, the password has contract-wide scope. This does not implement per-account passwords,
+ * though that would not be difficult to do.
  */
 contract PasswordProtected {
 	bytes32 private passwordHash;
 
+	/**
+     * A contract password must be set at construction time.
+	 */
 	constructor (string memory password) internal {
 		_setNewPassword(password);
 	}
@@ -18,12 +22,22 @@ contract PasswordProtected {
 		passwordHash = keccak256(bytes(password));
 	}
 
-	modifier onlyCorrectPassword(string memory password) {
-		require(bytes32(keccak256(bytes(password))) == passwordHash, "access denied");
+	function _isValidPassword(string memory password) internal view returns (bool ok) {
+		return (bytes32(keccak256(bytes(password))) == passwordHash);
+	}
+
+	/**
+     * Any contract functions requiring password-restricted access can use this modifier.
+	 */
+	modifier onlyValidPassword(string memory password) {
+		require(_isValidPassword(password), "access denied");
 		_;
 	}
 
-	function changePassword(string memory oldPassword, string memory newPassword) onlyCorrectPassword(oldPassword) public returns (bool ok) {
+	/**
+     * Allow password to be changed.
+	 */
+	function _changePassword(string memory oldPassword, string memory newPassword) onlyValidPassword(oldPassword) internal returns (bool ok) {
 		_setNewPassword(newPassword);
 		return true;
 	}

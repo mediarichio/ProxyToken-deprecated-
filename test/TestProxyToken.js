@@ -1310,7 +1310,10 @@ describe('ProxyToken', () => {
                 result.set(await expectFail(ProxyToken.methods.changePassword(wrongPassword, newPassword).send({from: account1})).catch(owner));
                 result.checkDidFail('Should fail if wrong password');
 
-                result.set(await ProxyToken.methods.changePassword(password, newPassword).send({from: pauser}));
+                result.set(await expectFail(ProxyToken.methods.changePassword(password, newPassword).send({from: account1})).catch(pauser));
+                result.checkDidFail('Should fail if correct password but not owner');
+
+                result.set(await ProxyToken.methods.changePassword(password, newPassword).send({from: owner}));
                 result.checkTransactionOk();
 
                 // Verify owner can no longer kill.
