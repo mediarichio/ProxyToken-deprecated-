@@ -34,14 +34,12 @@ contract GrantorRole is Ownable {
 	}
 
 	modifier onlyGrantor() {
-		require(isGrantor(msg.sender));
-		// Only grantor role can do this.
+		require(isGrantor(msg.sender), "onlyGrantor");
 		_;
 	}
 
 	modifier onlyGrantorOrSelf(address account) {
-		require(isGrantor(msg.sender) || msg.sender == account);
-		// Only grantor role can do this.
+		require(isGrantor(msg.sender) || msg.sender == account, "onlyGrantorOrSelf");
 		_;
 	}
 
@@ -75,7 +73,7 @@ contract GrantorRole is Ownable {
 	}
 
 	modifier onlyUniformGrantor() {
-		require(isUniformGrantor(msg.sender));
+		require(isUniformGrantor(msg.sender), "Only uniform grantor role can do this.");
 		// Only grantor role can do this.
 		_;
 	}

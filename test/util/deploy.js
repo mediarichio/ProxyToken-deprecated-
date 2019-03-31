@@ -13,7 +13,7 @@ const log = true;
 const debug = false;
 let logger = console;
 
-function getProvider() {
+function getWalletProvider() {
     if (useProductionBlockchain)
         return new Web3(new HDWalletProvider(
             'foster door tonight blade swing method kind wide glass pepper permit scrub',
@@ -23,7 +23,7 @@ function getProvider() {
         return ganache.provider();
 }
 
-async function deployContract(provider, contractFullPath, doBuild, someLogger) {
+async function deployContract(walletProvider, contractFullPath, doBuild, constructorArgs, someLogger) {
     if (!!someLogger)
         logger = someLogger;
 
@@ -32,21 +32,23 @@ async function deployContract(provider, contractFullPath, doBuild, someLogger) {
 
     if (log) logger.log('==> Deploying contract \'' + contractPath + '\' and dependencies...');
 
-    provider.setMaxListeners(15);       // Suppress MaxListenersExceededWarning warning
-    const web3 = new Web3(provider);
+    walletProvider.setMaxListeners(15);       // Suppress MaxListenersExceededWarning warning
+    const web3 = new Web3(walletProvider);
     this.gasPrice = await web3.eth.getGasPrice();
     this.accounts = await web3.eth.getAccounts();
 
     // Read in the compiled contract code and fetch ABI description and the bytecode as objects
     const compiled = JSON.parse(fs.readFileSync("./output/contracts.json"));
+    if (typeof(compiled.errors) !== 'undefined' && typeof(compiled.errors.formattedMessage) !== 'undefined')
+        throw compiled.errors.formattedMessage;
     const abi = compiled.contracts["ProxyToken.sol"]["ProxyToken"].abi;
     const bytecode = compiled.contracts['ProxyToken.sol']['ProxyToken'].evm.bytecode.object;
 
     // Deploy the contract and send it gas to run.
     if (log) logger.log('Attempting to deploy from account:' + this.accounts[0]);
     this.contract = await new web3.eth.Contract(abi)
-        .deploy({data: '0x' + bytecode, arguments: []})
-        .send({from: this.accounts[0], gas: '6500000'});
+        .deploy({data: '0x' + bytecode, arguments: constructorArgs})
+        .send({from: this.accounts[0], gas: '6700000'});
 
     if (this.contract.options.address == null) {
         if (log) logger.log(colors.red('==> Deploy FAILED!\n'));
@@ -56,11 +58,11 @@ async function deployContract(provider, contractFullPath, doBuild, someLogger) {
     return this;
 }
 
-async function deploy(contractFullPath, theLogger, doBuild) {
+async function deploy(contractFullPath, doBuild, constructorArgs, theLogger) {
     if (!!theLogger)
         logger = theLogger;
 
-    const deployment = await deployContract(getProvider(), contractFullPath, theLogger, doBuild).catch(logger.log);
+    const deployment = await deployContract(getWalletProvider(), contractFullPath, doBuild, constructorArgs, theLogger).catch(logger.log);
     if (log) logger.log('Done!');
 
     logger.log('Deployment: '+deployment);

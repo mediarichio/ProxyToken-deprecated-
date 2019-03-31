@@ -11,6 +11,9 @@ const util = require('util');
 // Set true temporarily to disable all tests except the one under development.
 const RUN_ALL_TESTS = true;     // This should be always checked in set to true!
 
+// If the compile/deploy is failing, set this true to figure out why (noisy)
+const SEE_DEPLOY_COMPILE_MSGS = false;
+
 
 // =====================================================================================================================
 // === This executes the entire test suite.
@@ -30,9 +33,13 @@ let ProxyToken = null;
 const contractFullPath = './contracts/ProxyToken.sol';
 build(contractFullPath, console);
 
+const defaultPassword = fs.readFileSync(path.resolve('./', 'kill-password.txt'), 'utf8');
+const constructorArgs = [defaultPassword];
+
+const deployLogger = SEE_DEPLOY_COMPILE_MSGS ? console : nullLogger;
 beforeEach(async () => {
-    // Deploy the source contracts fresh before each test (don't log deploy output).
-    const deployment = await deploy(contractFullPath, nullLogger, false);
+    // Deploy the source contracts fresh before each test (without rebuild, no deploy output logging).
+    const deployment = await deploy(contractFullPath, false, constructorArgs, deployLogger).catch(deployLogger);
     if (deployment !== undefined) {
         owner = deployment.accounts[0];
         account1 = deployment.accounts[1];
@@ -232,8 +239,8 @@ describe('ProxyToken', () => {
     // ================================================================================
     // === Test basic attributes of the ProxyToken token
     // ================================================================================
-    it('0. verify compilation of ProxyToken', () => {
-        checkAreNotEqual(ProxyToken, null, "It didn't compile or failed to deploy!");
+    it('0. verify successful compilation/deploymement of ProxyToken', () => {
+        checkAreNotEqual(ProxyToken, null, "ProxyToken is null. Did compile fail? Did deploy fail? Was there a problem with the constructor?");
     });
 
     if (runThisTest())
@@ -1165,7 +1172,7 @@ describe('ProxyToken', () => {
         result.set(await ProxyToken.methods.pause().send({from: owner}));
         result.checkTransactionOk();
 
-        // Try it while paused
+        // Try pausing while already paused
         result.set(await expectFail(method(...methodParams).send({from: from})).catch(catcher));
         result.checkDidFail();
 
@@ -1228,67 +1235,100 @@ describe('ProxyToken', () => {
         it('33. additional pausable tests', async () => {
             if (!ProxyToken) return;
 
-            // Allowed.
+            // Contract is not paused.
+
+            // Disallowed: non-pauser role pausing the not-paused contract.
+            result.set(await expectFail(ProxyToken.methods.pause().send({from: account7})).catch(catcher));
+            result.checkDidFail();
+            // Allowed: owner (pauser role) pausing the not-paused contract.
             result.set(await ProxyToken.methods.pause().send({from: owner}));
             result.checkTransactionOk();
-            // Disallowed.
+
+            // Contract is paused now.
+
+            // Disallowed: owner (pauser role) trying to pause while already paused.
             result.set(await expectFail(ProxyToken.methods.pause().send({from: owner})).catch(catcher));
             result.checkDidFail();
-            // Allowed.
+            // Disallowed: non-pauser role unpausing the paused contract.
+            result.set(await expectFail(ProxyToken.methods.unpause().send({from: account7})).catch(catcher));
+            result.checkDidFail();
+            // Allowed: owner (pauser role) unpausing the paused contract.
             result.set(await ProxyToken.methods.unpause().send({from: owner}));
             result.checkTransactionOk();
-            // Disallowed.
+
+            // Contract is no longer paused.
+
+            // Disallowed: owner (pauser role) unpausing the not-paused contract.
             result.set(await expectFail(ProxyToken.methods.unpause().send({from: owner})).catch(catcher));
             result.checkDidFail();
         });
 
     if (runThisTest())
-        it('34. Test kill())', async () => {
+        it('34. Test kill() and password support', async () => {
             if (!ProxyToken) return;
 
-            let password = fs.readFileSync(path.resolve('./', 'kill-password.txt'), 'utf8');
+            let password = defaultPassword;
             let wrongPassword = password + 'x';
+            let newPassword = password + 'y';
 
             await subtest('34a. kill when not paused', async () => {
-                result.set(await expectFail(ProxyToken.methods.kill(password, owner).send({from: account1})).catch(catcher));
+                result.set(await expectFail(ProxyToken.methods.kill(password).send({from: account1})).catch(catcher));
                 result.checkDidFail('Non-owner should not be able to kill');
 
-                result.set(await expectFail(ProxyToken.methods.kill(password, owner).send({from: owner})).catch(catcher));
+                result.set(await expectFail(ProxyToken.methods.kill(password).send({from: owner})).catch(catcher));
                 result.checkDidFail('Owner should not be able to kill when not paused');
             }).catch(catcher);
 
-            result.set(await ProxyToken.methods.pause().send({from: owner}));
+            result.set(await ProxyToken.methods.addPauser(account2).send({from: owner}));
+            result.checkTransactionOk();
+            result.set(await ProxyToken.methods.removePauser(owner).send({from: owner}));
             result.checkTransactionOk();
 
-            // From this point on the contract is paused.
+            result.set(await ProxyToken.methods.pause().send({from: account2}));
+            result.checkTransactionOk();
 
-            await subtest('34a. kill when paused but wrong owner param', async () => {
-                result.set(await expectFail(ProxyToken.methods.kill(password, account1).send({from: account1})).catch(catcher));
+            // From this point on the contract is paused, and account2 is pauser.
+            const pauser = account2;
+
+            await subtest('34c. kill when paused and correct owner param but wrong password', async () => {
+                result.set(await expectFail(ProxyToken.methods.kill(wrongPassword).send({from: account1})).catch(catcher));
                 result.checkDidFail('Non-owner should not be able to kill');
 
-                result.set(await expectFail(ProxyToken.methods.kill(password, account1).send({from: owner}),
-                    'You can\'t do this!').catch(catcher));
-                result.checkDidFail('Owner should not be able to kill when not paused');
-            }).catch(catcher);
-
-            await subtest('34a. kill when paused and correct owner param but wrong password', async () => {
-                result.set(await expectFail(ProxyToken.methods.kill(wrongPassword, owner).send({from: account1})).catch(catcher));
-                result.checkDidFail('Non-owner should not be able to kill');
-
-                result.set(await expectFail(ProxyToken.methods.kill(wrongPassword, owner).send({from: owner}),
+                result.set(await expectFail(ProxyToken.methods.kill(wrongPassword).send({from: pauser}),
                     'Incorrect password!').catch(catcher));
                 result.checkDidFail('Owner should not be able to kill when not paused');
+
+                // This only succeeds if not killed.
+                result.set(await ProxyToken.methods.symbol().call());
+                result.checkIsEqual('DYNP');
             }).catch(catcher);
 
-            await subtest('34a. kill when paused, with correct owner param and correct password', async () => {
-                result.set(await expectFail(ProxyToken.methods.kill(wrongPassword, owner).send({from: account1})).catch(catcher));
-                result.checkDidFail('Non-owner should not be able to kill');
+            await subtest('34d. test password change', async () => {
+                result.set(await expectFail(ProxyToken.methods.changePassword(wrongPassword, newPassword).send({from: account1})).catch(owner));
+                result.checkDidFail('Should fail if wrong password');
 
+                result.set(await ProxyToken.methods.changePassword(password, newPassword).send({from: pauser}));
+                result.checkTransactionOk();
+
+                // Verify owner can no longer kill.
+                result.set(await expectFail(ProxyToken.methods.kill(newPassword).send({from: owner})).catch(catcher));
+                result.checkDidFail();
+
+                // This only succeeds if not killed.
+                result.set(await ProxyToken.methods.symbol().call());
+                result.checkIsEqual('DYNP');
+            }).catch(catcher);
+
+            await subtest('34e. kill when paused, with correct owner param and correct (new) password', async () => {
+                result.set(await expectFail(ProxyToken.methods.kill(newPassword).send({from: account9})).catch(catcher));
+                result.checkDidFail('Non-owner should not be able to kill, even with correct password');
+
+                // This only succeeds if not killed.
                 result.set(await ProxyToken.methods.symbol().call());
                 result.checkIsEqual('DYNP');
 
-                result.set(await ProxyToken.methods.kill(password, owner).send({from: owner}).catch(catcher));
-                result.checkTransactionOk();
+                result.set(await ProxyToken.methods.kill(newPassword).send({from: pauser}).catch(catcher));
+                result.checkTransactionOk;
 
                 result.set(await expectFail(ProxyToken.methods.symbol().call(),
                     'Returned values aren\'t valid, did it run Out of Gas?'));

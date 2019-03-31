@@ -1,5 +1,6 @@
 pragma solidity ^0.5.2;
 
+import "./PasswordProtected.sol";
 import "./Identity.sol";
 import "../../openzeppelin-solidity/contracts/token/ERC20/ERC20Burnable.sol";
 import "../../openzeppelin-solidity/contracts/token/ERC20/ERC20Detailed.sol";
@@ -10,7 +11,7 @@ import "./UniformTokenGrantor.sol";
  * the creator, and can later be distributed freely using transfer transferFrom and other ERC20
  * functions.
  */
-contract ProxyToken is Identity, ERC20, ERC20Pausable, ERC20Burnable, ERC20Detailed, UniformTokenGrantor {
+contract ProxyToken is PasswordProtected, Identity, ERC20, ERC20Pausable, ERC20Burnable, ERC20Detailed, UniformTokenGrantor {
 	uint32 public constant VERSION = 3;
 
 	uint8 private constant DECIMALS = 18;
@@ -22,7 +23,7 @@ contract ProxyToken is Identity, ERC20, ERC20Pausable, ERC20Burnable, ERC20Detai
 	/**
 	 * @dev Constructor that gives msg.sender all of existing tokens.
 	 */
-	constructor () public ERC20Detailed("MediaRich.io Dyncoin proxy token", "DYNP", DECIMALS) {
+	constructor (string memory defaultPassword) ERC20Detailed("MediaRich.io Dyncoin proxy token", "DYNP", DECIMALS) PasswordProtected(defaultPassword) public {
 		// This is the only place where we ever mint tokens.
 		_mint(msg.sender, INITIAL_SUPPLY);
 	}
@@ -48,13 +49,13 @@ contract ProxyToken is Identity, ERC20, ERC20Pausable, ERC20Burnable, ERC20Detai
 	}
 
 	/**
-	 * @dev Allow owner to kill the contract, with restrictions in place to ensure this could not
-	 * happen by accident very easily.
+	 * @dev Allow pauser to kill the contract (which must already be paused), with enough restrictions
+	 * in place to ensure this could not happen by accident very easily. ETH is returned to owner wallet.
 	 */
-	function kill(string memory password, address payable payableOwner) public onlyOwner whenPaused {
-		require(msg.sender == payableOwner && payableOwner == owner(), "You can't do this!");
-		require(bytes32(keccak256(bytes(password))) == bytes32(0x7d6a22a0265f9a4babdf272504fab774c22662c0fa2854e633eb010f2855e249), "Incorrect password!");
-		// Recover the funds on the contract
+	function kill(string memory password) whenPaused onlyPauser onlyCorrectPassword(password) public returns (bool) {
+		require(isPauser(msg.sender), "onlyPauser");
+		address payable payableOwner = address(uint160(owner()));
 		selfdestruct(payableOwner);
+		return true;
 	}
 }

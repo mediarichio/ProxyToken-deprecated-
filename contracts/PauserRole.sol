@@ -30,7 +30,7 @@ contract PauserRole is Ownable {
 	}
 
 	modifier onlyPauser() {
-        require(isPauser(msg.sender)); /* Only pauser role can do this. */
+        require(isPauser(msg.sender), "onlyPauser");
 		_;
 	}
 
