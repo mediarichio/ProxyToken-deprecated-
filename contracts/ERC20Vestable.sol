@@ -128,8 +128,8 @@ contract ERC20Vestable is ERC20, Registration, GrantorRole, IERC20Vestable {
 	 * @param grantHolder = The address to do this for.
 	 *   the special value 0 to indicate today.
 	 * @return = A tuple with the following values:
-	 *   cliffDuration = duration of the cliff.
 	 *   vestDuration = grant duration in days.
+	 *   cliffDuration = duration of the cliff.
 	 *   vestIntervalDays = number of days between vesting periods.
 	 */
 	function getIntrinsicVestingSchedule(address grantHolder)
@@ -137,14 +137,14 @@ contract ERC20Vestable is ERC20, Registration, GrantorRole, IERC20Vestable {
 	view
 	onlyGrantorOrSelf(grantHolder)
 	returns (
-		uint32 cliffDuration,
 		uint32 vestDuration,
+		uint32 cliffDuration,
 		uint32 vestIntervalDays
 	)
 	{
 		return (
-		_vestingSchedules[grantHolder].cliffDuration,
 		_vestingSchedules[grantHolder].duration,
+		_vestingSchedules[grantHolder].cliffDuration,
 		_vestingSchedules[grantHolder].interval
 		);
 	}
@@ -352,8 +352,8 @@ contract ERC20Vestable is ERC20, Registration, GrantorRole, IERC20Vestable {
 	 *   amountNotVested = the amount that is vested (equal to vestingAmount - vestedAmount)
 	 *   amountOfGrant = the amount of tokens subject to vesting.
 	 *   vestStartDay = starting day of the grant (in days since the UNIX epoch).
-	 *   cliffDuration = duration of the cliff.
 	 *   vestDuration = grant duration in days.
+	 *   cliffDuration = duration of the cliff.
 	 *   vestIntervalDays = number of days between vesting periods.
 	 *   isActive = true if the vesting schedule is currently active.
 	 *   wasRevoked = true if the vesting schedule was revoked.
@@ -370,8 +370,8 @@ contract ERC20Vestable is ERC20, Registration, GrantorRole, IERC20Vestable {
 		uint256 amountNotVested,
 		uint256 amountOfGrant,
 		uint32 vestStartDay,
-		uint32 cliffDuration,
 		uint32 vestDuration,
+		uint32 cliffDuration,
 		uint32 vestIntervalDays,
 		bool isActive,
 		bool wasRevoked
@@ -387,8 +387,8 @@ contract ERC20Vestable is ERC20, Registration, GrantorRole, IERC20Vestable {
 		notVestedAmount,
 		grantAmount,
 		grant.startDay,
-		vesting.cliffDuration,
 		vesting.duration,
+		vesting.cliffDuration,
 		vesting.interval,
 		grant.isActive,
 		grant.wasRevoked

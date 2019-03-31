@@ -25,7 +25,7 @@ contract Registration is ERC20, Ownable {
 		return true;
 	}
 
-	function accountIsRegistered(address account) public view returns (bool isRegistered) {
+	function isRegistered(address account) public view returns (bool ok) {
 		return _isRegistered[account];
 	}
 	function _accountExists(address account) internal view returns (bool exists) {

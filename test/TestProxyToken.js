@@ -625,8 +625,8 @@ describe('ProxyToken', () => {
         checkAreEqual(accountBalance[1], vestingAmount, 'grantee tokens not vested');
         checkAreEqual(accountBalance[2], vestingAmount, 'grantee total granted tokens');
         checkAreEqual(accountBalance[3], startDay, 'grant startDay');
-        checkAreEqual(accountBalance[4], cliffDuration, 'grant cliff duration');
-        checkAreEqual(accountBalance[5], duration, 'grant duration');
+        checkAreEqual(accountBalance[4], duration, 'grant duration');
+        checkAreEqual(accountBalance[5], cliffDuration, 'grant cliff duration');
         checkAreEqual(accountBalance[6], interval, 'grant interval');
         checkAreEqual(accountBalance[7], true, 'grant isActive');
         checkAreEqual(accountBalance[8], false, 'grant wasRevoked');
@@ -665,8 +665,8 @@ describe('ProxyToken', () => {
                 checkAreEqualR(actualNotVestedAmount, expectedNotVested, msg+'tokens not vested is incorrect');
                 checkAreEqualR(actualvestingAmount, vestingAmount, msg+'reported grant size is incorrect');
                 checkAreEqual(result.value()[3], startDay, msg+'grant startDay value is incorrect');
-                checkAreEqual(result.value()[4], cliffDuration, msg+'grant cliff duration value is incorrect');
-                checkAreEqual(result.value()[5], duration, msg+'grant duration value is incorrect');
+                checkAreEqual(result.value()[4], duration, msg+'grant duration value is incorrect');
+                checkAreEqual(result.value()[5], cliffDuration, msg+'grant cliff duration value is incorrect');
                 checkAreEqual(result.value()[6], interval, msg+'grant interval value is incorrect');
                 checkAreEqual(result.value()[7], true, msg+'grant isActive value is incorrect');
                 checkAreEqual(result.value()[8], false, msg+'grant wasRevoked value is incorrect');
@@ -1530,15 +1530,15 @@ describe('ProxyToken', () => {
         });
 
     if (runThisTest())
-        it('42. accountIsRegistered()', async () => {
+        it('42. isRegistered()', async () => {
             if (!ProxyToken) return;
 
             // Owner should initially be pre-registered (via constructor).
-            result.set(await ProxyToken.methods.accountIsRegistered(owner).call({from: account9}));
+            result.set(await ProxyToken.methods.isRegistered(owner).call({from: account9}));
             result.checkIsEqual(true);
 
             // Account1 should initially not be registered.
-            result.set(await ProxyToken.methods.accountIsRegistered(account1).call({from: account9}));
+            result.set(await ProxyToken.methods.isRegistered(account1).call({from: account9}));
             result.checkIsEqual(false);
 
             // Register account1.
@@ -1546,7 +1546,7 @@ describe('ProxyToken', () => {
             result.checkTransactionOk();
 
             // Account1 should initially now be registered.
-            result.set(await ProxyToken.methods.accountIsRegistered(account1).call({from: account9}));
+            result.set(await ProxyToken.methods.isRegistered(account1).call({from: account9}));
             result.checkIsEqual(true);
 
         });
