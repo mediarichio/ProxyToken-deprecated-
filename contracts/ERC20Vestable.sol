@@ -192,7 +192,7 @@ contract ERC20Vestable is ERC20, Registration, GrantorRole, IERC20Vestable {
         require(_hasVestingSchedule(vestingLocation), "no such vesting schedule");
 
         // Transfer the total number of tokens from grantor into the account's holdings.
-        _transfer(msg.sender, beneficiary, totalAmount);
+        _transfer(grantor, beneficiary, totalAmount);
         /* Emits a Transfer event. */
 
         // Create and populate a token grant, referencing vesting schedule.
