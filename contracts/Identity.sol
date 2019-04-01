@@ -13,7 +13,7 @@ contract Identity {
     /**
      * Handy function to confirm address of the current account.
      */
-    function whereAmI() public view returns (address yourAddressIs) {
+    function whereAmI() public view returns (address yourAddress) {
         address myself = msg.sender;
         return myself;
     }
@@ -21,7 +21,7 @@ contract Identity {
     /**
      * Handy function to confirm short name of the current account.
      */
-    function whoAmI() public view returns (string memory youAre) {
+    function whoAmI() public view returns (string memory yourName) {
         return (_names[msg.sender]);
     }
 }
