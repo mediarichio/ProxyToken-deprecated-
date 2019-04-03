@@ -255,4 +255,5 @@ function replaceAll(value, oldSeparator, newSeparator) {
     return result;
 }
 
-build();
+// Uncomment ro run directly or debug
+//build();
