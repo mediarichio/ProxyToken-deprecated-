@@ -12,7 +12,7 @@ contract PasswordProtected {
     bytes32 private passwordHash;
 
     /**
-     * A contract password must be set at construction time.
+     * A default contract password must be set at construction time.
      */
     constructor (string memory password) internal {
         _setNewPassword(password);
