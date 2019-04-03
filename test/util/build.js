@@ -83,7 +83,7 @@ function compileContract(contractPath, contractFile) {
     addSource(contractFile, readSources(contractPath + contractFile));
     input_monolithic.sources[contractFile] = {content: allSources};
 
-    // Save the monolithic source
+    // Save the monolithic source to output
     saveOutputFile('contracts.sol', allSources);
 
     // Compile all the contracts
@@ -96,6 +96,19 @@ function compileContract(contractPath, contractFile) {
     //compiledJson = unescapeQuotes(unquote(compiledJson));
     saveOutputFile('contracts.json', compiledJson);
     if (log) logger.log(JSON.parse(compiledJson));
+
+    // Sort the ABI alphabetically by name so it's visually easier to locate a given methods while in Remix.
+    const abi = compiledObject.contracts["ProxyToken.sol"]["ProxyToken"].abi;
+    this.abi = abi.sort((a,b) => {
+        if (lower(a.name) < lower(b.name))
+            return -1;
+        if (lower(a.name) > lower(b.name))
+            return 1;
+        return 0;
+    });
+
+    // Save the sorted ABI to output
+    saveOutputFile('contracts.abi', JSON.stringify(this.abi, null, 2));
 
     function loadImport(path) {
         // This should never happen because we process imports manually.
@@ -113,6 +126,13 @@ function compileContract(contractPath, contractFile) {
     this.compiledContract = compiledObject;
 
     return this;
+}
+
+function lower(x) {
+    if (x === undefined)
+        return '';
+    else
+        return x.toLowerCase();
 }
 
 function unquote(str) {
@@ -234,3 +254,5 @@ function replaceAll(value, oldSeparator, newSeparator) {
     }
     return result;
 }
+
+build();
