@@ -56,9 +56,10 @@ contract UniformTokenGrantor is ERC20Vestable {
     onlySafeAccount(grantor)
     returns (bool ok)
     {
-        require(isUniformGrantor(grantor), "uniform grantor only");
-        require(maxStartDay > minStartDay, "invalid maxStartDay");
-        require(expirationDay > today(), "invalid expirationDay");
+        require(
+            isUniformGrantor(grantor)
+         && maxStartDay > minStartDay
+         && expirationDay > today(), "invalid params");
 
         // We allow owner to set or change existing specific restrictions.
         _restrictions[grantor] = restrictions(

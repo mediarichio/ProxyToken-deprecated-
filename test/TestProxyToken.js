@@ -18,7 +18,8 @@ const RUN_ALL_TESTS = true;     // This should be always checked in set to true!
 
 const log = false;      // Set true to log details.
 const nullLogger = {
-    log: function () { }
+    log: function () {
+    }
 };
 
 // Helper values for reference to ETH test accounts.
@@ -53,7 +54,7 @@ beforeEach(async () => {
         account9 = deployment.accounts[9];
 
         ProxyToken = deployment.contract;
-        if (log) console.log(colors.green('==> ProxyToken deployed to '+ProxyToken.options.address));
+        if (log) console.log(colors.green('==> ProxyToken deployed to ' + ProxyToken.options.address));
     }
 });
 
@@ -82,7 +83,7 @@ function whichAccountIs(test) {
             console.log(('Account is account' + i).replace('account0', 'owner'));
             return;
         }
-        console.log('Account \''+test+'\' is not one of the 10 given test accounts!');
+        console.log('Account \'' + test + '\' is not one of the 10 given test accounts!');
     }
 }
 
@@ -171,7 +172,7 @@ describe('ProxyToken', () => {
         if (strResult.length <= WEI_DECIMALS)
             result = 0;
         else {
-            strResult  = strResult.substring(0, result.length - WEI_DECIMALS);       // Lop off 18 zeroes from long string value
+            strResult = strResult.substring(0, result.length - WEI_DECIMALS);       // Lop off 18 zeroes from long string value
             if (log) console.log('   strResult', strResult);
             if (strResult.length === 0)
                 result = 0;
@@ -568,7 +569,7 @@ describe('ProxyToken', () => {
 
     const VALID_PAST_START_DAY = JAN_1_2000_DAYS + TEN_YEARS_DAYS;      // Use 2010 as start date for tests.
 
-    Object.size = function(obj) {
+    Object.size = function (obj) {
         var size = 0, key;
         for (key in obj) {
             if (obj.hasOwnProperty(key)) size++;
@@ -660,16 +661,16 @@ describe('ProxyToken', () => {
                 const [actualVestedAmount, actualNotVestedAmount, actualvestingAmount] =
                     [result.value()[0], result.value()[1], result.value()[2]];
 
-                if (log) console.log(colors.grey(msg+'      on day ' + elapsedDays + '/' + duration + ', expected [' + round(expectedNotVested) + ', ' + vestingAmount + '] got => [' + round(actualNotVestedAmount) + ', ' + actualvestingAmount + ']'));
-                checkAreEqualR(actualVestedAmount, vestingAmount - expectedNotVested, msg+'tokens vested is incorrect');
-                checkAreEqualR(actualNotVestedAmount, expectedNotVested, msg+'tokens not vested is incorrect');
-                checkAreEqualR(actualvestingAmount, vestingAmount, msg+'reported grant size is incorrect');
-                checkAreEqual(result.value()[3], startDay, msg+'grant startDay value is incorrect');
-                checkAreEqual(result.value()[4], duration, msg+'grant duration value is incorrect');
-                checkAreEqual(result.value()[5], cliffDuration, msg+'grant cliff duration value is incorrect');
-                checkAreEqual(result.value()[6], interval, msg+'grant interval value is incorrect');
-                checkAreEqual(result.value()[7], true, msg+'grant isActive value is incorrect');
-                checkAreEqual(result.value()[8], false, msg+'grant wasRevoked value is incorrect');
+                if (log) console.log(colors.grey(msg + '      on day ' + elapsedDays + '/' + duration + ', expected [' + round(expectedNotVested) + ', ' + vestingAmount + '] got => [' + round(actualNotVestedAmount) + ', ' + actualvestingAmount + ']'));
+                checkAreEqualR(actualVestedAmount, vestingAmount - expectedNotVested, msg + 'tokens vested is incorrect');
+                checkAreEqualR(actualNotVestedAmount, expectedNotVested, msg + 'tokens not vested is incorrect');
+                checkAreEqualR(actualvestingAmount, vestingAmount, msg + 'reported grant size is incorrect');
+                checkAreEqual(result.value()[3], startDay, msg + 'grant startDay value is incorrect');
+                checkAreEqual(result.value()[4], duration, msg + 'grant duration value is incorrect');
+                checkAreEqual(result.value()[5], cliffDuration, msg + 'grant cliff duration value is incorrect');
+                checkAreEqual(result.value()[6], interval, msg + 'grant interval value is incorrect');
+                checkAreEqual(result.value()[7], true, msg + 'grant isActive value is incorrect');
+                checkAreEqual(result.value()[8], false, msg + 'grant wasRevoked value is incorrect');
             }
         }
         return true;    // Success if didn't throw
@@ -931,7 +932,7 @@ describe('ProxyToken', () => {
             await subtest('25b. verified not allowed to create grants longer than 10 years', async () => {
                 result.set(await expectFail(testGrantVestingTokens_balances(owner, account1,
                     [tokensToWei(100 * ONE_MILLION), tokensToWei(50 * ONE_MILLION), VALID_PAST_START_DAY],
-                    [TEN_YEARS_DAYS+1, 0, 1, true])).catch(catcher));
+                    [TEN_YEARS_DAYS + 1, 0, 1, true])).catch(catcher));
                 result.checkDidFail();
             }).catch(catcher);
 
@@ -975,7 +976,7 @@ describe('ProxyToken', () => {
 
             await subtest('26c. verified can revoke grant issued before today ON today', async () => {
                 await testRevokeVestingSchedule(owner, account1,
-                    [tokensToWei(1001), tokensToWei(1000), TODAY_DAYS-10],
+                    [tokensToWei(1001), tokensToWei(1000), TODAY_DAYS - 10],
                     [360, 90, 30, true],
                     TODAY_DAYS);
             }).catch(catcher);
@@ -1025,7 +1026,7 @@ describe('ProxyToken', () => {
             if (!ProxyToken) return;
 
             const numReturnValues = 9;
-            const resultSize = numReturnValues*2;   /* Because indexed and named value is returned for each */
+            const resultSize = numReturnValues * 2;   /* Because indexed and named value is returned for each */
 
             // It should work that any account can call vestingAsOf(), which returns self-vesting
             result.set(await ProxyToken.methods.vestingAsOf(Math.floor(TODAY_DAYS)).call({from: owner, gas: VESTASOFGAS}));
@@ -1361,8 +1362,8 @@ describe('ProxyToken', () => {
             let isUniformGrantor = true;
             let beneficiary = account2;
             let beneficiary2 = account3;
-            let vestingSchedule = [12,3,1, true];
-            let vestingSchedule2 = [24,6,1, true];
+            let vestingSchedule = [12, 3, 1, true];
+            let vestingSchedule2 = [24, 6, 1, true];
 
             await subtest('40a. check that owner can\'t set restrictions on non-grantor.', async () => {
                 result.set(await expectFail(ProxyToken.methods.setRestrictions(grantor, MINSTARTDAY, MAXSTARTDAY, EXPIRATIONDAY).send({from: owner})).catch(catcher));
@@ -1481,9 +1482,9 @@ describe('ProxyToken', () => {
             }).catch(catcher);
 
             await subtest('40p. check revocation of beneficiary2.', async () => {
-                result.set(await ProxyToken.methods.revokeGrant(beneficiary2, MINSTARTDAY+5).send({from: grantor, gas: REVOKEONGAS}));
+                result.set(await ProxyToken.methods.revokeGrant(beneficiary2, MINSTARTDAY + 5).send({from: grantor, gas: REVOKEONGAS}));
                 result.checkTransactionOk();
-                result.set(await testAccountHasNoGrant(beneficiary2, true, MINSTARTDAY+5));     // beneficiary2 keeps (5/12) million.
+                result.set(await testAccountHasNoGrant(beneficiary2, true, MINSTARTDAY + 5));     // beneficiary2 keeps (5/12) million.
                 result.checkIsTrue();
             }).catch(catcher);
 
@@ -1554,6 +1555,55 @@ describe('ProxyToken', () => {
 
         });
 
+    if (runThisTest())
+        it('43. burn tokens - test not-vested tokens can\'t be burned', async () => {
+            if (!ProxyToken) return;
+
+            await subtest('43a. check that cannot burn not-vested tokens (using account1)', async () => {
+                // Create a grant that would be not vested right now
+                await testGrantVestingTokens(owner, account1,
+                    [tokensToWei(1000000), tokensToWei(1000000), TODAY_DAYS],
+                    [12, 3, 1, true]);
+                result.checkTransactionOk();
+
+                // Try to burn 1 token now (zero are vested). Should fail.
+                result.set(await expectFail(ProxyToken.methods.burn(tokensToWei(1)).send({from: account1})).catch(catcher));
+                result.checkDidFail();
+            }).catch(catcher);
+
+            await subtest('43b. check that only vested tokens can be burned (using account2)', async () => {
+                // Create a grant that would be half-vested right now
+                await testGrantVestingTokens(owner, account2,
+                    [tokensToWei(1000000), tokensToWei(1000000), TODAY_DAYS-6],
+                    [12, 3, 1, true]);
+                result.checkTransactionOk();
+
+                // Try to burn 1 more than half the tokens (half are vested). Should fail.
+                result.set(await expectFail(ProxyToken.methods.burn(tokensToWei(500001)).send({from: account2})).catch(catcher));
+                result.checkDidFail();
+
+                // Try to burn exactly half the tokens (half are vested). Should work.
+                result.set(await ProxyToken.methods.burn(tokensToWei(500000)).send({from: account2}));
+                result.checkTransactionOk();
+            }).catch(catcher);
+
+            await subtest('43b. check that fully vested tokens can be burned (using account3)', async () => {
+                // Create a grant that would be fully-vested right now
+                await testGrantVestingTokens(owner, account3,
+                    [tokensToWei(1000000), tokensToWei(1000000), TODAY_DAYS-20],
+                    [12, 3, 1, true]);
+                result.checkTransactionOk();
+
+                // Try to burn all the tokens + 1 (all are vested). Should fail.
+                result.set(await expectFail(ProxyToken.methods.burn(tokensToWei(1000001)).send({from: account3})).catch(catcher));
+                result.checkDidFail();
+
+                // Try to burn exactly all the tokens (all are vested). Should work.
+                result.set(await ProxyToken.methods.burn(tokensToWei(1000000)).send({from: account3}));
+                result.checkTransactionOk();
+            }).catch(catcher);
+        });
+
     // ================================================================================
     // === Last: Summary
     // ================================================================================
@@ -1568,12 +1618,12 @@ describe('ProxyToken', () => {
             if (attempts === 0)
                 console.log(colors.yellow('==> No checks were made by any test.'));
             else if (failures > 0)
-                console.log(colors.red('==> Out of '+attempts+' checks, '+failures+' failed!'));
+                console.log(colors.red('==> Out of ' + attempts + ' checks, ' + failures + ' failed!'));
             else
-                console.log(colors.green('==> All '+attempts+' checks were successful.'));
+                console.log(colors.green('==> All ' + attempts + ' checks were successful.'));
 
             if (unexpectedErrors > 0)
-                console.log(colors.red('==> FAILURE: '+unexpectedErrors+' uncaught exception(s)! (see above)'));
+                console.log(colors.red('==> FAILURE: ' + unexpectedErrors + ' uncaught exception(s)! (see above)'));
         }
     });
 });

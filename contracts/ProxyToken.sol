@@ -43,7 +43,7 @@ contract ProxyToken is PasswordProtected, Identity, ERC20, ERC20Pausable, ERC20B
      * supply. There is no reason for a token holder to EVER call this method directly. It will be
      * used by the future Dyncoin contract to implement the ProxyToken side of of token redemption.
      */
-    function burn(uint256 value) public {
+    function burn(uint256 value) onlyIfFundsAvailableNow(msg.sender, value) public {
         // This is the only place where we ever burn tokens.
         _burn(msg.sender, value);
     }

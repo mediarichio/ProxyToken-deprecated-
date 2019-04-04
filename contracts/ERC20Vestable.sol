@@ -1,7 +1,7 @@
 pragma solidity ^0.5.7;
 
 import "../../openzeppelin-solidity/contracts/token/ERC20/ERC20Pausable.sol";
-import "./Registration.sol";
+import "./VerifiedAccount.sol";
 import "./GrantorRole.sol";
 import "./IERC20Vestable.sol";
 
@@ -25,7 +25,7 @@ import "./IERC20Vestable.sol";
  *   - Revocable grants, intended for use in cases when vesting tokens have been gifted to the holder,
  *     such as with employee grants that are given as compensation.
  */
-contract ERC20Vestable is ERC20, Registration, GrantorRole, IERC20Vestable {
+contract ERC20Vestable is ERC20, VerifiedAccount, GrantorRole, IERC20Vestable {
     using SafeMath for uint256;
 
     // Date-related constants for sanity-checking dates to reject obvious erroneous inputs
@@ -431,24 +431,24 @@ contract ERC20Vestable is ERC20, Registration, GrantorRole, IERC20Vestable {
      * @dev returns true if the account has sufficient funds available to cover the given amount,
      *   including consideration for vesting tokens.
      *
-     * @param owner = The account to check.
+     * @param account = The account to check.
      * @param amount = The required amount of vested funds.
      * @param onDay = The day to check for, in days since the UNIX epoch.
      */
-    function _fundsAreAvailableOn(address owner, uint256 amount, uint32 onDay) internal view returns (bool ok) {
-        return (amount <= _getAvailableAmount(owner, onDay));
+    function _fundsAreAvailableOn(address account, uint256 amount, uint32 onDay) internal view returns (bool ok) {
+        return (amount <= _getAvailableAmount(account, onDay));
     }
 
     /**
      * @dev Modifier to make a function callable only when the amount is sufficiently vested right now.
      *
-     * @param owner = The account to check.
+     * @param account = The account to check.
      * @param amount = The required amount of vested funds.
      */
-    modifier onlyIfFundsAvailableNow(address owner, uint256 amount) {
+    modifier onlyIfFundsAvailableNow(address account, uint256 amount) {
         // Distinguish insufficient overall balance from insufficient vested funds balance in failure msg.
-        require(_fundsAreAvailableOn(owner, amount, today()),
-            balanceOf(owner) < amount ? "insufficient funds" : "insufficient vested funds");
+        require(_fundsAreAvailableOn(account, amount, today()),
+            balanceOf(account) < amount ? "insufficient funds" : "insufficient vested funds");
         _;
     }
 
