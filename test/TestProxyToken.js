@@ -589,9 +589,9 @@ describe('ProxyToken', () => {
 
     // --------------------------------------------------------------------------------
 
-    async function testGrantVestingTokens(owner, account, vestingParams, vestingSchedule) {
+    async function testGrantVestingTokens(owner, account, grantParams, vestingSchedule) {
         result.set(await ProxyToken.methods.grantVestingTokens(
-            account, ...vestingParams, ...vestingSchedule).send({from: owner, gas: GRANTGAS}));
+            account, ...grantParams, ...vestingSchedule).send({from: owner, gas: GRANTGAS}));
         result.checkTransactionOk();
 
         return true;    // Success if didn't throw
@@ -676,9 +676,9 @@ describe('ProxyToken', () => {
         return true;    // Success if didn't throw
     }
 
-    async function testVestingSchedule(owner, account, vestingParams, vestingSchedule) {
-        await testGrantVestingTokens_balances(owner, account, vestingParams, vestingSchedule).catch(catcher);
-        await testVestingScheduleDayByDay(account, vestingParams, vestingSchedule).catch(catcher);
+    async function testVestingSchedule(owner, account, grantParams, vestingSchedule) {
+        await testGrantVestingTokens_balances(owner, account, grantParams, vestingSchedule).catch(catcher);
+        await testVestingScheduleDayByDay(account, grantParams, vestingSchedule).catch(catcher);
         return true;    // Success if didn't throw
     }
 
@@ -1350,9 +1350,9 @@ describe('ProxyToken', () => {
     let MINSTARTDAY = TODAY_DAYS;
     let MAXSTARTDAY = TODAY_DAYS + 30;
     let EXPIRATIONDAY = TODAY_DAYS + 1;
-    let vestingParams_restricted1 = [tokensToWei(2 * ONE_MILLION), tokensToWei(ONE_MILLION), MINSTARTDAY - 1];
-    let vestingParams_restricted2 = [tokensToWei(2 * ONE_MILLION), tokensToWei(ONE_MILLION), MAXSTARTDAY];
-    let vestingParams = [tokensToWei(2 * ONE_MILLION), tokensToWei(ONE_MILLION), MINSTARTDAY];
+    let grantParams_restricted1 = [tokensToWei(2 * ONE_MILLION), tokensToWei(ONE_MILLION), MINSTARTDAY - 1];
+    let grantParams_restricted2 = [tokensToWei(2 * ONE_MILLION), tokensToWei(ONE_MILLION), MAXSTARTDAY];
+    let grantParams = [tokensToWei(2 * ONE_MILLION), tokensToWei(ONE_MILLION), MINSTARTDAY];
 
     if (runThisTest())
         it('40. test uniform grantor setup', async () => {
@@ -1405,7 +1405,7 @@ describe('ProxyToken', () => {
             }).catch(catcher);
 
             await subtest('40e. check that grantor can\'t grant tokens without restrictions set up.', async () => {
-                result.set(await expectFail(ProxyToken.methods.grantUniformVestingTokens(beneficiary, ...vestingParams).send({from: owner}),
+                result.set(await expectFail(ProxyToken.methods.grantUniformVestingTokens(beneficiary, ...grantParams).send({from: owner}),
                     'grantor account not ready').catch(catcher));
                 result.checkDidFail();
 
@@ -1451,23 +1451,23 @@ describe('ProxyToken', () => {
             // From this point on in the test, the grantor is properly set up as restricted uniform grantor with a vesting schedule.
 
             await subtest('40j. check that date restrictions are enforced when granting.', async () => {
-                result.set(await expectFail(ProxyToken.methods.grantUniformVestingTokens(beneficiary, ...vestingParams_restricted1).send({from: grantor, gas: UNIFORMGRANTGAS}),
+                result.set(await expectFail(ProxyToken.methods.grantUniformVestingTokens(beneficiary, ...grantParams_restricted1).send({from: grantor, gas: UNIFORMGRANTGAS}),
                     'startDay too early').catch(catcher));
                 result.checkDidFail();
-                result.set(await expectFail(ProxyToken.methods.grantUniformVestingTokens(beneficiary, ...vestingParams_restricted2).send({from: grantor, gas: UNIFORMGRANTGAS}),
+                result.set(await expectFail(ProxyToken.methods.grantUniformVestingTokens(beneficiary, ...grantParams_restricted2).send({from: grantor, gas: UNIFORMGRANTGAS}),
                     'startDay too early').catch(catcher));
                 result.checkDidFail();
             }).catch(catcher);
 
             await subtest('40k. check that grantor CAN grant tokens, and they are granted correctly.', async () => {
-                result.set(await ProxyToken.methods.grantUniformVestingTokens(beneficiary, ...vestingParams).send({from: grantor, gas: UNIFORMGRANTGAS}));
+                result.set(await ProxyToken.methods.grantUniformVestingTokens(beneficiary, ...grantParams).send({from: grantor, gas: UNIFORMGRANTGAS}));
                 result.checkTransactionOk();
 
-                await testVestingScheduleDayByDay(beneficiary, vestingParams, vestingSchedule).catch(catcher);
+                await testVestingScheduleDayByDay(beneficiary, grantParams, vestingSchedule).catch(catcher);
             }).catch(catcher);
 
             await subtest('40m. check that under the same conditions, safe grant is disallowed.', async () => {
-                result.set(await expectFail(ProxyToken.methods.safeGrantUniformVestingTokens(beneficiary2, ...vestingParams).send({from: grantor, gas: UNIFORMGRANTGAS}),
+                result.set(await expectFail(ProxyToken.methods.safeGrantUniformVestingTokens(beneficiary2, ...grantParams).send({from: grantor, gas: UNIFORMGRANTGAS}),
                     'account not registered').catch(catcher));
                 result.checkDidFail();
             }).catch(catcher);
@@ -1475,10 +1475,10 @@ describe('ProxyToken', () => {
             await subtest('40n. check that grantor CAN safe-grant tokens, and they are granted correctly.', async () => {
                 result.set(await ProxyToken.methods.registerAccount().send({from: beneficiary2}));
                 result.checkTransactionOk();
-                result.set(await ProxyToken.methods.safeGrantUniformVestingTokens(beneficiary2, ...vestingParams).send({from: grantor, gas: UNIFORMGRANTGAS}));
+                result.set(await ProxyToken.methods.safeGrantUniformVestingTokens(beneficiary2, ...grantParams).send({from: grantor, gas: UNIFORMGRANTGAS}));
                 result.checkTransactionOk();
 
-                await testVestingScheduleDayByDay(beneficiary2, vestingParams, vestingSchedule).catch(catcher);
+                await testVestingScheduleDayByDay(beneficiary2, grantParams, vestingSchedule).catch(catcher);
             }).catch(catcher);
 
             await subtest('40p. check revocation of beneficiary2.', async () => {
@@ -1489,7 +1489,7 @@ describe('ProxyToken', () => {
             }).catch(catcher);
 
             await subtest('40q. check that first beneficiary grant not affected by revocation of beneficiary2.', async () => {
-                await testVestingScheduleDayByDay(beneficiary, vestingParams, vestingSchedule).catch(catcher);
+                await testVestingScheduleDayByDay(beneficiary, grantParams, vestingSchedule).catch(catcher);
             }).catch(catcher);
 
             await subtest('40r. heck that grantor account reflects one full and one partial revocation having been subtracted.', async () => {
