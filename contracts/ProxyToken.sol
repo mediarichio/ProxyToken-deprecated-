@@ -12,7 +12,7 @@ import "./UniformTokenGrantor.sol";
  * functions.
  */
 contract ProxyToken is PasswordProtected, Identity, ERC20, ERC20Pausable, ERC20Burnable, ERC20Detailed, UniformTokenGrantor {
-    uint32 public constant VERSION = 4;
+    uint32 public constant VERSION = 5;
 
     uint8 private constant DECIMALS = 18;
     uint256 private constant TOKEN_WEI = 10 ** uint256(DECIMALS);
