@@ -417,8 +417,8 @@ contract ERC20Vestable is ERC20, VerifiedAccount, GrantorRole, IERC20Vestable {
         uint256 amountNotVested,
         uint256 amountOfGrant,
         uint32 vestStartDay,
+	    uint32 vestDuration,
         uint32 cliffDuration,
-        uint32 vestDuration,
         uint32 vestIntervalDays,
         bool isActive,
         bool wasRevoked
