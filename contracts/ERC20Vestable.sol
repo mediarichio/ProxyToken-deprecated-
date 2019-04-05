@@ -255,7 +255,7 @@ contract ERC20Vestable is ERC20, VerifiedAccount, GrantorRole, IERC20Vestable {
     function safeGrantVestingTokens(
         address beneficiary, uint256 totalAmount, uint256 vestingAmount,
         uint32 startDay, uint32 duration, uint32 cliffDuration, uint32 interval,
-        bool isRevocable) public onlyGrantor onlySafeAccount(beneficiary) returns (bool ok) {
+        bool isRevocable) public onlyGrantor onlyExistingAccount(beneficiary) returns (bool ok) {
 
         return grantVestingTokens(
             beneficiary, totalAmount, vestingAmount,

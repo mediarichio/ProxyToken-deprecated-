@@ -33,7 +33,7 @@ contract VerifiedAccount is ERC20, Ownable {
         return account == msg.sender || _isRegistered[account];
     }
 
-    modifier onlySafeAccount(address account) {
+    modifier onlyExistingAccount(address account) {
         require(_accountExists(account), "account not registered");
         _;
     }
@@ -43,17 +43,17 @@ contract VerifiedAccount is ERC20, Ownable {
     // === Safe ERC20 methods
     // =========================================================================
 
-    function safeTransfer(address to, uint256 value) public onlySafeAccount(to) returns (bool ok) {
+    function safeTransfer(address to, uint256 value) public onlyExistingAccount(to) returns (bool ok) {
         transfer(to, value);
         return true;
     }
 
-    function safeApprove(address spender, uint256 value) public onlySafeAccount(spender) returns (bool ok) {
+    function safeApprove(address spender, uint256 value) public onlyExistingAccount(spender) returns (bool ok) {
         approve(spender, value);
         return true;
     }
 
-    function safeTransferFrom(address from, address to, uint256 value) public onlySafeAccount(to) returns (bool ok) {
+    function safeTransferFrom(address from, address to, uint256 value) public onlyExistingAccount(to) returns (bool ok) {
         transferFrom(from, to, value);
         return true;
     }
@@ -67,7 +67,7 @@ contract VerifiedAccount is ERC20, Ownable {
      * @dev Allows the current owner to transfer control of the contract to a newOwner.
      * @param newOwner The address to transfer ownership to.
      */
-    function transferOwnership(address newOwner) public onlySafeAccount(newOwner) onlyOwner {
+    function transferOwnership(address newOwner) public onlyExistingAccount(newOwner) onlyOwner {
         super.transferOwnership(newOwner);
     }
 }
