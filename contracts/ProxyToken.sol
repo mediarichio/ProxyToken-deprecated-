@@ -1,6 +1,5 @@
 pragma solidity ^0.5.7;
 
-import "./PasswordProtected.sol";
 import "./Identity.sol";
 import "../../openzeppelin-solidity/contracts/token/ERC20/ERC20Burnable.sol";
 import "../../openzeppelin-solidity/contracts/token/ERC20/ERC20Detailed.sol";
@@ -11,7 +10,7 @@ import "./UniformTokenGrantor.sol";
  * the creator, and can later be distributed freely using transfer transferFrom and other ERC20
  * functions.
  */
-contract ProxyToken is PasswordProtected, Identity, ERC20, ERC20Pausable, ERC20Burnable, ERC20Detailed, UniformTokenGrantor {
+contract ProxyToken is Identity, ERC20, ERC20Pausable, ERC20Burnable, ERC20Detailed, UniformTokenGrantor {
     uint32 public constant VERSION = 6;
 
     uint8 private constant DECIMALS = 18;
@@ -23,7 +22,7 @@ contract ProxyToken is PasswordProtected, Identity, ERC20, ERC20Pausable, ERC20B
     /**
      * @dev Constructor that gives msg.sender all of existing tokens.
      */
-    constructor (string memory defaultPassword) ERC20Detailed("MediaRich.io Dyncoin proxy token", "DYNP", DECIMALS) PasswordProtected(defaultPassword) public {
+    constructor () ERC20Detailed("MediaRich.io Dyncoin proxy token", "DYNP", DECIMALS) public {
         // This is the only place where we ever mint tokens.
         _mint(msg.sender, INITIAL_SUPPLY);
     }
@@ -49,18 +48,10 @@ contract ProxyToken is PasswordProtected, Identity, ERC20, ERC20Pausable, ERC20B
     }
 
     /**
-     * Allow owner to change password.
-     */
-    function changePassword(string memory oldPassword, string memory newPassword) onlyOwner public returns (bool ok) {
-        _changePassword(oldPassword, newPassword);
-        return true;
-    }
-
-    /**
      * @dev Allow pauser to kill the contract (which must already be paused), with enough restrictions
      * in place to ensure this could not happen by accident very easily. ETH is returned to owner wallet.
      */
-    function kill(string memory password) whenPaused onlyPauser onlyValidPassword(password) public returns (bool itsDeadJim) {
+    function kill() whenPaused onlyPauser public returns (bool itsDeadJim) {
         require(isPauser(msg.sender), "onlyPauser");
         address payable payableOwner = address(uint160(owner()));
         selfdestruct(payableOwner);

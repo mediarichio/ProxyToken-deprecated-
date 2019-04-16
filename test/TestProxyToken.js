@@ -31,8 +31,7 @@ let ProxyToken = null;
 const contractFullPath = './contracts/ProxyToken.sol';
 build(contractFullPath, console);
 
-const defaultPassword = fs.readFileSync(path.resolve('./', 'kill-password.txt'), 'utf8');
-const constructorArgs = [defaultPassword];
+const constructorArgs = [];
 
 // If the compile/deploy is failing, set this true to figure out why (but is noisy)
 const logDeployAndCompileErrors = !RUN_ALL_TESTS;
@@ -1268,18 +1267,14 @@ describe('ProxyToken', () => {
         });
 
     if (runThisTest())
-        it('34. Test kill() and password support', async () => {
+        it('34. Test kill()', async () => {
             if (!ProxyToken) return;
 
-            let password = defaultPassword;
-            let wrongPassword = password + 'x';
-            let newPassword = password + 'y';
-
             await subtest('34a. kill when not paused', async () => {
-                result.set(await expectFail(ProxyToken.methods.kill(password).send({from: account1})).catch(catcher));
+                result.set(await expectFail(ProxyToken.methods.kill().send({from: account1})).catch(catcher));
                 result.checkDidFail('Non-owner should not be able to kill');
 
-                result.set(await expectFail(ProxyToken.methods.kill(password).send({from: owner})).catch(catcher));
+                result.set(await expectFail(ProxyToken.methods.kill().send({from: owner})).catch(catcher));
                 result.checkDidFail('Owner should not be able to kill when not paused');
             }).catch(catcher);
 
@@ -1294,47 +1289,15 @@ describe('ProxyToken', () => {
             // From this point on the contract is paused, and account2 is pauser.
             const pauser = account2;
 
-            await subtest('34c. kill when paused and correct owner param but wrong password', async () => {
-                result.set(await expectFail(ProxyToken.methods.kill(wrongPassword).send({from: account1})).catch(catcher));
+            await subtest('34b. kill when paused, with correct owner param', async () => {
+                result.set(await expectFail(ProxyToken.methods.kill().send({from: account9})).catch(catcher));
                 result.checkDidFail('Non-owner should not be able to kill');
 
-                result.set(await expectFail(ProxyToken.methods.kill(wrongPassword).send({from: pauser}),
-                    'access denied').catch(catcher));
-                result.checkDidFail('Owner should not be able to kill when not paused');
-
-                // This only succeeds if not killed.
-                result.set(await ProxyToken.methods.symbol().call());
-                result.checkIsEqual('DYNP');
-            }).catch(catcher);
-
-            await subtest('34d. test password change', async () => {
-                result.set(await expectFail(ProxyToken.methods.changePassword(wrongPassword, newPassword).send({from: account1})).catch(owner));
-                result.checkDidFail('Should fail if wrong password');
-
-                result.set(await expectFail(ProxyToken.methods.changePassword(password, newPassword).send({from: account1})).catch(pauser));
-                result.checkDidFail('Should fail if correct password but not owner');
-
-                result.set(await ProxyToken.methods.changePassword(password, newPassword).send({from: owner}));
-                result.checkTransactionOk();
-
-                // Verify owner can no longer kill.
-                result.set(await expectFail(ProxyToken.methods.kill(newPassword).send({from: owner})).catch(catcher));
-                result.checkDidFail();
-
-                // This only succeeds if not killed.
-                result.set(await ProxyToken.methods.symbol().call());
-                result.checkIsEqual('DYNP');
-            }).catch(catcher);
-
-            await subtest('34e. kill when paused, with correct owner param and correct (new) password', async () => {
-                result.set(await expectFail(ProxyToken.methods.kill(newPassword).send({from: account9})).catch(catcher));
-                result.checkDidFail('Non-owner should not be able to kill, even with correct password');
-
                 // This only succeeds if not killed.
                 result.set(await ProxyToken.methods.symbol().call());
                 result.checkIsEqual('DYNP');
 
-                result.set(await ProxyToken.methods.kill(newPassword).send({from: pauser}).catch(catcher));
+                result.set(await ProxyToken.methods.kill().send({from: pauser}).catch(catcher));
                 result.checkTransactionOk;
 
                 result.set(await expectFail(ProxyToken.methods.symbol().call(),
