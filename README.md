@@ -1,6 +1,6 @@
-# MediaRich Proxy Token
+# CPUcoin Proxy Token
 
-Smart contracts for the MediaRich.io proxy token, the IEO/ICO token which later can be redeemed for the Dyncoin ecosystem token. 
+Smart contracts for the CPUcoin proxy token, the IEO/ICO token which later can be redeemed for the Dyncoin ecosystem token. 
 
 Core to the ProxyToken is implementation of a fully-featured vesting token.
  
